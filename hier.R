@@ -1,4 +1,5 @@
 hier <- function (hierTs){
+  #given the hierTs data set, 
   library(hts)
   
   #computes the bu prediction given the predictions (1 x tot time series) and the S matrix
@@ -44,14 +45,14 @@ hier <- function (hierTs){
     endTrain <- length(timeIdx) - iTest
     train <- window(hierTs, start = timeIdx[1], end = timeIdx[endTrain] )
     test <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
-    fcastBu <- forecast(train, h = h, method = "bu")
-    fcastComb <- forecast(train, h = h, method = "comb", weights="ols")
-    fcastCombWls <- forecast(train, h = h, method = "comb", weights="wls")
-    fcastCombMint <- forecast(train, h = h, method = "comb", weights="mint")
-    maeBu[iTest,] <- accuracy(fcastBu, test)["MAE",]
-    maeComb[iTest,] <- accuracy(fcastComb, test)["MAE",]
-    maeCombWls[iTest,] <- accuracy(fcastCombWls, test)["MAE",]
-    maeCombMint[iTest,] <- accuracy(fcastCombMint, test)["MAE",]
+    fcastBu <- forecast (train, h = h, method = "bu")
+    fcastComb <- forecast (train, h = h, method = "comb", weights="ols")
+    fcastCombWls <- forecast (train, h = h, method = "comb", weights="wls")
+    fcastCombMint <- forecast (train, h = h, method = "comb", weights="mint")
+    maeBu[iTest,] <- accuracy (fcastBu, test)["MAE",]
+    maeComb[iTest,] <- accuracy (fcastComb, test)["MAE",]
+    maeCombWls[iTest,] <- accuracy (fcastCombWls, test)["MAE",]
+    maeCombMint[iTest,] <- accuracy (fcastCombMint, test)["MAE",]
     
     
     allTsTrain <- allts(train)
