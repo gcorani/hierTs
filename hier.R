@@ -1,6 +1,7 @@
-hier <- function (hierTs){
+hier <- function (hierTs, h=1){
   #given the hierTs data set, 
   library(hts)
+  library(tidyverse)
   
   #computes the bu prediction given the predictions (1 x tot time series) and the S matrix
   #(tot time series X bottom time series)
@@ -25,48 +26,59 @@ hier <- function (hierTs){
     return (buPreds)
   }
   
-  #for simplicity we run only 1-step ahead predictions
-  h=1
+  hierMae <- function (htsPred, htsActual) {
+    #receives two hts objects, containing  forecast and actual value.
+    #computes the mae for the relevant forecast horizon only
+    #Sets correctly the columns names currently not possible
+    maeHts <- abs (allts(htsPred) - allts(htsActual))[h,]
+    # colnames(maeHts) <- colnames(allts(htsPred))
+    return (maeHts)
+  }
+  
   
   #extract the time from the data set to then split into train / test (test set contains 25 or 5 time points)
   testSize <- 25
   if (length(hierTs$bts[,1]) < 25){
     testSize <- 5
   }
-  totTs <- nrow(smatrix(hierTs))
-  maeBu <- matrix(nrow = testSize, ncol = totTs)
-  maeComb <- matrix(nrow = testSize, ncol = totTs)
-  maeCombWls <- matrix(nrow = testSize, ncol = totTs)
-  maeCombMint <- matrix(nrow = testSize, ncol = totTs)
-  maeBayes <- matrix(nrow = testSize, ncol = totTs)
+  #if h=1, the possible preds are the whole test size lenght; 
+  #if h=2, the possible preds are the (test size lenght -1); etc.
+  possiblePreds <- testSize - h + 1
   
-  for (iTest in 1:testSize){
+  totTs <- nrow(smatrix(hierTs))
+  maeBu <- matrix(nrow = possiblePreds, ncol = totTs)
+  maeComb <- matrix(nrow = possiblePreds, ncol = totTs)
+  maeCombWls <- matrix(nrow = possiblePreds, ncol = totTs)
+  maeCombMint <- matrix(nrow = possiblePreds, ncol = totTs)
+  maeBayes <- matrix(nrow = possiblePreds, ncol = totTs)
+  
+  for (iTest in 1:possiblePreds) {
     timeIdx <- time(hierTs$bts[,1])
-    endTrain <- length(timeIdx) - iTest
+    endTrain <- length(timeIdx) - h - (iTest - 1)
     train <- window(hierTs, start = timeIdx[1], end = timeIdx[endTrain] )
     test <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
     fcastBu <- forecast (train, h = h, method = "bu")
     fcastComb <- forecast (train, h = h, method = "comb", weights="ols")
     fcastCombWls <- forecast (train, h = h, method = "comb", weights="wls")
     fcastCombMint <- forecast (train, h = h, method = "comb", weights="mint")
-    maeBu[iTest,] <- accuracy (fcastBu, test)["MAE",]
-    maeComb[iTest,] <- accuracy (fcastComb, test)["MAE",]
-    maeCombWls[iTest,] <- accuracy (fcastCombWls, test)["MAE",]
-    maeCombMint[iTest,] <- accuracy (fcastCombMint, test)["MAE",]
+    maeBu[iTest,] <- hierMae(fcastBu, test )
+    maeComb[iTest,] <- hierMae(fcastComb, test )
+    maeCombWls[iTest,] <- hierMae(fcastCombWls, test )
+    maeCombMint[iTest,] <- hierMae(fcastCombMint, test )
     
     
     allTsTrain <- allts(train)
     numTs <- ncol(allTsTrain)
     alpha <- 0.2
     sigma <- vector(length = numTs)
-    preds <- matrix(nrow = h, ncol = numTs)
-    #now we compute predictions and their sigma for each trainign ts
+    preds <- vector(length = numTs)
+    #compute, for each  ts, predictions and sigma (h-steps ahead) 
     for (i in 1:numTs){
       model <- ets(ts(allTsTrain[,i]))
-      tmp <- forecast(model, h=1, level=1-alpha)
-      preds[h,i] <- tmp$mean[1]
+      tmp <- forecast(model, h=h, level=1-alpha)
+      preds[i] <- tmp$mean[h]
       #we  need the [1] to access the numerical information within a ts objects
-      sigma[i] <- abs ( (tmp$mean[1] - tmp$upper[1])  / (qnorm(alpha / 2)) )
+      sigma[i] <- abs ( (tmp$mean[h] - tmp$upper[h])  / (qnorm(alpha / 2)) )
     }
     
     S <- smatrix(train)
@@ -114,10 +126,10 @@ hier <- function (hierTs){
     
     bayesPreds <- buReconcile(priorMean, S, predsAllTs = FALSE)
     #now you need to reconstruct the bu predictions
-    maeBayes[iTest,] = abs (allts(test) - bayesPreds) 
+    maeBayes[iTest,] = abs (allts(test)[h,] - bayesPreds) 
   }
-  
-  return( list (
+
+    return( list (
     "percBetterBu"=mean(maeBayes<maeBu),
     "percBetterComb"=mean(maeBayes<maeComb),
     "percBetterCombWls"=mean(maeBayes<maeCombWls),
