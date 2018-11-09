@@ -1,5 +1,10 @@
 hier <- function (hierTs, h=1, fmethod="ets"){
-  #given the hierTs data set, 
+  #given the hierTs data set, reconciles the h-steps ahead forecast 
+  #fmethod can be "ets", "arima" or "rw" (rw still to be implemented)
+  
+  #TODO: add naive model
+  #add temporal hierarchy
+  
   library(hts)
   # library(tidyverse)
   
@@ -80,6 +85,10 @@ hier <- function (hierTs, h=1, fmethod="ets"){
       else if (fmethod=="arima"){
         model <- auto.arima(ts(allTsTrain[,i]))
       }
+      # else if (fmethod=="rw"){
+        # model <- rwf(ts(allTsTrain[,i]))
+      # }
+      
       tmp <- forecast(model, h=h, level=1-alpha)
       preds[i] <- tmp$mean[h]
       #we  need the [1] to access the numerical information within a ts objects
@@ -135,10 +144,16 @@ hier <- function (hierTs, h=1, fmethod="ets"){
   }
   
   return( list (
-    "percBetterBu"=mean(maeBayes<maeBu),
-    "percBetterComb"=mean(maeBayes<maeComb),
-    "percBetterCombWls"=mean(maeBayes<maeCombWls),
-    "percBetterCombMint"=mean(maeBayes<maeCombMint),
+    "signBetterBu"=mean(maeBayes<maeBu),
+    "signBetterComb"=mean(maeBayes<maeComb),
+    "signBetterCombWls"=mean(maeBayes<maeCombWls),
+    "signBetterCombMint"=mean(maeBayes<maeCombMint),
+    
+    "maeImprovementBu"= mean ( (maeBu-maeBayes)/ ((maeBu+maeBayes)/2) ),
+    "maeImprovementComb"= mean ( (maeComb-maeBayes)/ ((maeComb+maeBayes)/2) ),
+    "maeImprovementWls"= mean ( (maeCombWls-maeBayes)/ ((maeCombWls+maeBayes)/2) ),
+    "maeImprovementMint"= mean ( (maeCombMint-maeBayes)/ ((maeCombMint+maeBayes)/2) ),
+    
     "maeBu"=maeBu, "maeComb"=maeComb, "maeCombWls"=maeCombWls, "maeCombMint"=maeCombMint, "maeBayes"=maeBayes
   ))
   
