@@ -1,7 +1,7 @@
-hier <- function (hierTs, h=1){
+hier <- function (hierTs, h=1, fmethod="ets"){
   #given the hierTs data set, 
   library(hts)
-  library(tidyverse)
+  # library(tidyverse)
   
   #computes the bu prediction given the predictions (1 x tot time series) and the S matrix
   #(tot time series X bottom time series)
@@ -58,9 +58,9 @@ hier <- function (hierTs, h=1){
     train <- window(hierTs, start = timeIdx[1], end = timeIdx[endTrain] )
     test <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
     fcastBu <- forecast (train, h = h, method = "bu")
-    fcastComb <- forecast (train, h = h, method = "comb", weights="ols")
-    fcastCombWls <- forecast (train, h = h, method = "comb", weights="wls")
-    fcastCombMint <- forecast (train, h = h, method = "comb", weights="mint")
+    fcastComb <- forecast (train, h = h, method = "comb", weights="ols", fmethod=fmethod)
+    fcastCombWls <- forecast (train, h = h, method = "comb", weights="wls", fmethod=fmethod)
+    fcastCombMint <- forecast (train, h = h, method = "comb", weights="mint", fmethod=fmethod)
     maeBu[iTest,] <- hierMae(fcastBu, test )
     maeComb[iTest,] <- hierMae(fcastComb, test )
     maeCombWls[iTest,] <- hierMae(fcastCombWls, test )
@@ -74,7 +74,12 @@ hier <- function (hierTs, h=1){
     preds <- vector(length = numTs)
     #compute, for each  ts, predictions and sigma (h-steps ahead) 
     for (i in 1:numTs){
-      model <- ets(ts(allTsTrain[,i]))
+      if (fmethod=="ets"){
+        model <- ets(ts(allTsTrain[,i]))
+      }
+      else if (fmethod=="arima"){
+        model <- auto.arima(ts(allTsTrain[,i]))
+      }
       tmp <- forecast(model, h=h, level=1-alpha)
       preds[i] <- tmp$mean[h]
       #we  need the [1] to access the numerical information within a ts objects
@@ -128,15 +133,15 @@ hier <- function (hierTs, h=1){
     #now you need to reconstruct the bu predictions
     maeBayes[iTest,] = abs (allts(test)[h,] - bayesPreds) 
   }
-
-    return( list (
+  
+  return( list (
     "percBetterBu"=mean(maeBayes<maeBu),
     "percBetterComb"=mean(maeBayes<maeComb),
     "percBetterCombWls"=mean(maeBayes<maeCombWls),
     "percBetterCombMint"=mean(maeBayes<maeCombMint),
     "maeBu"=maeBu, "maeComb"=maeComb, "maeCombWls"=maeCombWls, "maeCombMint"=maeCombMint, "maeBayes"=maeBayes
   ))
-
+  
   
 }
 
