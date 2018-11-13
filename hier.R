@@ -58,7 +58,7 @@ hier <- function (hierTs, h=1, fmethod="ets"){
     endTrain <- length(timeIdx) - h - (iTest - 1)
     train <- window(hierTs, start = timeIdx[1], end = timeIdx[endTrain] )
     test <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
-    fcastBu <- forecast(train, h = h, method = "bu")
+    fcastBu <- forecast(train, h = h, method = "bu", fmethod = fmethod)
     fcastComb <- forecast(train, h = h, method = "comb", weights="ols", fmethod=fmethod)
     fcastCombWls <- forecast(train, h = h, method = "comb", weights="wls", fmethod=fmethod)
     fcastCombMint <- forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod)
@@ -77,15 +77,15 @@ hier <- function (hierTs, h=1, fmethod="ets"){
     for (i in 1:numTs){
       if (fmethod=="ets"){
         model <- ets(ts(allTsTrain[,i]))
+        tmp <- forecast(model, h=h, level=1-alpha)
       }
       else if (fmethod=="arima"){
         model <- auto.arima(ts(allTsTrain[,i]))
+        tmp <- forecast(model, h=h, level=1-alpha)
       }
-      # else if (fmethod=="rw"){
-        # model <- rwf(ts(allTsTrain[,i]))
-      # }
-      
-      tmp <- forecast(model, h=h, level=1-alpha)
+      else if (fmethod=="rw"){
+        tmp <- rwf(ts(allTsTrain[,i]),h=h, level=1-alpha)
+       }
       preds[i] <- tmp$mean[h]
       sigma[i] <- abs ( (tmp$mean[h] - tmp$upper[h])  / (qnorm(alpha / 2)) )
     }
