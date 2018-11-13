@@ -1,8 +1,12 @@
-hier <- function (hierTs, h=1, fmethod="ets"){
+hierOld <- function (hierTs, h=1, fmethod="ets"){
   #given the hierTs data set, reconciles the h-steps ahead forecast 
   #fmethod can be "ets", "arima" or "rw" (rw still to be implemented)
   
+  #TODO: add naive model
+  #add temporal hierarchy
+  
   library(hts)
+  # library(tidyverse)
   
   #computes the bu prediction given the predictions (1 x tot time series) and the S matrix
   #(tot time series X bottom time series)
@@ -12,7 +16,7 @@ hier <- function (hierTs, h=1, fmethod="ets"){
   buReconcile <- function (preds,S, predsAllTs = FALSE) {
     bottomPreds <- preds
     if (predsAllTs) {
-      #retrieves the bottom prediction from all predictions
+      #retrive the bottom prediction from all predictions
       upperIdx <- 1 : (nrow(S) - ncol(S))
       bottomIdx <- setdiff (1:nrow(S), upperIdx)
       bottomPreds <- preds [,bottomIdx]
@@ -58,16 +62,16 @@ hier <- function (hierTs, h=1, fmethod="ets"){
     endTrain <- length(timeIdx) - h - (iTest - 1)
     train <- window(hierTs, start = timeIdx[1], end = timeIdx[endTrain] )
     test <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
-    fcastBu <- forecast(train, h = h, method = "bu")
-    fcastComb <- forecast(train, h = h, method = "comb", weights="ols", fmethod=fmethod)
-    fcastCombWls <- forecast(train, h = h, method = "comb", weights="wls", fmethod=fmethod)
-    fcastCombMint <- forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod)
+    fcastBu <- forecast (train, h = h, method = "bu")
+    fcastComb <- forecast (train, h = h, method = "comb", weights="ols", fmethod=fmethod)
+    fcastCombWls <- forecast (train, h = h, method = "comb", weights="wls", fmethod=fmethod)
+    fcastCombMint <- forecast (train, h = h, method = "comb", weights="mint", fmethod=fmethod)
     maeBu[iTest,] <- hierMae(fcastBu, test )
     maeComb[iTest,] <- hierMae(fcastComb, test )
     maeCombWls[iTest,] <- hierMae(fcastCombWls, test )
     maeCombMint[iTest,] <- hierMae(fcastCombMint, test )
     
-    #recompute predictions to be easily accessed by the Bayesian method
+    
     allTsTrain <- allts(train)
     numTs <- ncol(allTsTrain)
     alpha <- 0.2
@@ -82,28 +86,32 @@ hier <- function (hierTs, h=1, fmethod="ets"){
         model <- auto.arima(ts(allTsTrain[,i]))
       }
       # else if (fmethod=="rw"){
-        # model <- rwf(ts(allTsTrain[,i]))
+      # model <- rwf(ts(allTsTrain[,i]))
       # }
       
       tmp <- forecast(model, h=h, level=1-alpha)
       preds[i] <- tmp$mean[h]
+      #we  need the [1] to access the numerical information within a ts objects
       sigma[i] <- abs ( (tmp$mean[h] - tmp$upper[h])  / (qnorm(alpha / 2)) )
     }
     
     S <- smatrix(train)
+    #debug code to check the bu implementation is correct
+    # buPreds <- buReconcile(preds, S, predsAllTs=TRUE)
+    # maeBu_gc = abs (allts(test) - buPreds)
+    # #unit test: is our bu consistent with hyndmand?
+    # consistent = matrix(maeBu_gc) == maeBu
+    # if (mean(consistent) < 1){
+    #   error("bu implementation not consistent")
+    # }
     
     #Bayesian reconciliation
+    #p is the number of the bottom time series
     bottomIdx <- seq( nrow(S) - ncol(S) +1, nrow(S))
     upperIdx <- setdiff(1:nrow(S),bottomIdx)
-    #p is the number of the bottom time series
     p <- length(bottomIdx)
-    #prior mean and covariance of the bottom time series
     priorMean <- preds[bottomIdx]
     priorCov <- matrix (nrow = p, ncol = p)
-    #prior mean and covariance of the upper time series
-    Y_vec <- preds[upperIdx]
-    Sigma_y <- matrix(nrow = length(upperIdx), ncol = length(upperIdx))
-    
     
     for (i in 1:p) {
       priorCov[i,i] <- sigma[i]^2
@@ -111,27 +119,28 @@ hier <- function (hierTs, h=1, fmethod="ets"){
     priorCov[is.na(priorCov)] <- 0
     #prior covariance is now instantiated
     
-    #next row is necessary to finalize the covariance matrix of y
-    for (i in 1:length(upperIdx)) {
-      Sigma_y[i,i] <- sigma[upperIdx[i]]^2
+    #now we start the updating with the forecast of each upper time series
+    for (i in 1:length(upperIdx)){
+      #get the matrix A of the linear map
+      #A states which are the time series to be summed
+      #in order to obtain the i-th upper time series
+      A <- S[i,]
+      mu_y <- preds[i]
+      var_y <- sigma[i]^2
+      
+      correl <- priorCov %*% A %*%
+        solve (t(A) %*% priorCov %*% A + var_y)
+      
+      priorMean <- priorMean + 
+        correl  %*%
+        (mu_y - t(A) %*% priorMean)
+      
+      priorCov <- priorCov - correl  %*% t(A) %*% priorCov
     }
-    Sigma_y[is.na(Sigma_y)] <- 0  
-    #Sigma_y  is now instantiated
     
-    
-    #==update in a single shot
-    #A explains how to combin the bottom series in order to obtain the
-    # upper series
-    A <- t(S[upperIdx,])
-    
-    correl <- priorCov %*% A %*%
-      solve (t(A) %*% priorCov %*% A + Sigma_y)
-    
-    postMean <- priorMean + correl  %*%
-      (Y_vec - t(A) %*% priorMean)
-    bayesPreds <- buReconcile(postMean, S, predsAllTs = FALSE)
+    bayesPreds <- buReconcile(priorMean, S, predsAllTs = FALSE)
+    #now you need to reconstruct the bu predictions
     maeBayes[iTest,] = abs (allts(test)[h,] - bayesPreds) 
-    
   }
   
   return( list (
@@ -150,4 +159,3 @@ hier <- function (hierTs, h=1, fmethod="ets"){
   
   
 }
-
