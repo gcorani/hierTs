@@ -1,10 +1,11 @@
 hier <- function (hierTs, h=1, fmethod="ets"){
   #given the hierTs data set, reconciles the h-steps ahead forecast 
-  #fmethod can be "ets", "arima" or "rw" (rw still to be implemented)
+  #fmethod can be "ets" or "arima"
+  #code support also "rw" method but that case is uninteresting: no reconciliation is necessary
   
   library(hts)
   
-  #computes the bu prediction given the predictions (1 x tot time series) and the S matrix
+  #The buReconcile function computes the bu prediction given the predictions (1 x tot time series) and the S matrix
   #(tot time series X bottom time series)
   #predsAllTs is a flag: is set to true, the input preds contains predictions for all the hierarchy
   #and the function retrieves the bottom series; if set to false, this is not needed
@@ -38,6 +39,7 @@ hier <- function (hierTs, h=1, fmethod="ets"){
   
   
   #extract the time from the data set to then split into train / test (test set contains 25 or 5 time points)
+  set.seed(seed = 0)
   testSize <- 25
   if (length(hierTs$bts[,1]) < 25){
     testSize <- 5
@@ -134,20 +136,47 @@ hier <- function (hierTs, h=1, fmethod="ets"){
     
   }
   
-  return( list (
+  myList <- list (
     "signBetterBu"=mean(maeBayes<maeBu),
     "signBetterComb"=mean(maeBayes<maeComb),
     "signBetterCombWls"=mean(maeBayes<maeCombWls),
     "signBetterCombMint"=mean(maeBayes<maeCombMint),
     
-    "maeImprovementBu"= mean ( (maeBu-maeBayes)/ ((maeBu+maeBayes)/2) ),
-    "maeImprovementComb"= mean ( (maeComb-maeBayes)/ ((maeComb+maeBayes)/2) ),
-    "maeImprovementWls"= mean ( (maeCombWls-maeBayes)/ ((maeCombWls+maeBayes)/2) ),
-    "maeImprovementMint"= mean ( (maeCombMint-maeBayes)/ ((maeCombMint+maeBayes)/2) ),
+    "TotalMaeImprovBu" =   sum(maeBu - maeBayes)       / (sum(maeBu + maeBayes) /2),
+    "TotalMaeImprovComb"=  sum(maeComb - maeBayes)     / (sum(maeComb + maeBayes) /2),
+    "TotalMaeImprovWls" =  sum(maeCombWls - maeBayes)  / (sum(maeCombWls + maeBayes) /2),
+    "TotalMaeImprovMint"=  sum(maeCombMint - maeBayes) / (sum(maeCombMint + maeBayes) /2),
+    
+    "EachTsMaeImprovBu"  = mean ( (maeBu-maeBayes)/ ((maeBu+maeBayes)/2) ),
+    "EachTsMaeImprovComb"= mean ( (maeComb-maeBayes)/ ((maeComb+maeBayes)/2) ),
+    "EachTsMaeImprovWls"=  mean ( (maeCombWls-maeBayes)/ ((maeCombWls+maeBayes)/2) ),
+    "EachTsMaeImprovMint"= mean ( (maeCombMint-maeBayes)/ ((maeCombMint+maeBayes)/2) ),
     
     "maeBu"=maeBu, "maeComb"=maeComb, "maeCombWls"=maeCombWls, "maeCombMint"=maeCombMint, "maeBayes"=maeBayes
-  ))
+  )
   
+  #save to file the results
+  #fields to be dumped
+  idx <- 1:12
+  dataFrame <- data.frame(matrix(data=unlist(myList)[idx],nrow = 1, ncol = length(idx)))
+  colnames(dataFrame) <- names(myList)[idx]
+  dataFrame$dset <- deparse(substitute(hierTs))
+  dataFrame$fmethod <- fmethod
+  dataFrame$h <- h
+  dataFrame <- dataFrame[, c((length(idx)+1):(length(idx)+3), 1:length(idx))]
   
+  filename <- "hierResults.csv"
+  writeNames <- TRUE
+  if(file.exists(filename)){
+    writeNames <- FALSE
+  }
+  
+  write.table(dataFrame, file=filename, append = TRUE, sep=",", row.names = FALSE, col.names = writeNames)
+  return (myList)
+
+  
+    
 }
+  
+  
 
