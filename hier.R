@@ -78,16 +78,13 @@ hier <- function (hierTs, h=1, fmethod="ets"){
     #compute, for each  ts, predictions and sigma (h-steps ahead) 
     for (i in 1:numTs){
       if (fmethod=="ets"){
-        model <- ets(ts(allTsTrain[,i]))
-        tmp <- forecast(model, h=h, level=1-alpha)
+        model <- ets (ts(allTsTrain[,i]))
+        tmp <- forecast (model, h=h, level=1-alpha)
       }
       else if (fmethod=="arima"){
-        model <- auto.arima(ts(allTsTrain[,i]))
-        tmp <- forecast(model, h=h, level=1-alpha)
+        model <- auto.arima (ts(allTsTrain[,i]))
+        tmp <- forecast (model, h=h, level=1-alpha)
       }
-      else if (fmethod=="rw"){
-        tmp <- rwf(ts(allTsTrain[,i]),h=h, level=1-alpha)
-       }
       preds[i] <- tmp$mean[h]
       sigma[i] <- abs ( (tmp$mean[h] - tmp$upper[h])  / (qnorm(alpha / 2)) )
     }
@@ -101,12 +98,11 @@ hier <- function (hierTs, h=1, fmethod="ets"){
     p <- length(bottomIdx)
     #prior mean and covariance of the bottom time series
     priorMean <- preds[bottomIdx]
-    priorCov <- matrix (nrow = p, ncol = p)
     #prior mean and covariance of the upper time series
     Y_vec <- preds[upperIdx]
     Sigma_y <- matrix(nrow = length(upperIdx), ncol = length(upperIdx))
     
-    
+    priorCov <- matrix (nrow = p, ncol = p)
     for (i in 1:p) {
       priorCov[i,i] <- sigma[i]^2
     }
