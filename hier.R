@@ -3,6 +3,7 @@ hier <- function (hierTs, h=1, fmethod="ets"){
   #fmethod can be "ets" or "arima"
   #code support also "rw" method but that case is uninteresting: no reconciliation is necessary
   
+  #TODO: check how to compute percentages
   library(hts)
   
   #The buReconcile function computes the bu prediction given the predictions (1 x tot time series) and the S matrix
@@ -102,19 +103,14 @@ hier <- function (hierTs, h=1, fmethod="ets"){
     Y_vec <- preds[upperIdx]
     Sigma_y <- matrix(nrow = length(upperIdx), ncol = length(upperIdx))
     
-    priorCov <- matrix (nrow = p, ncol = p)
-    for (i in 1:p) {
-      priorCov[i,i] <- sigma[i]^2
-    }
-    priorCov[is.na(priorCov)] <- 0
-    #prior covariance is now instantiated
+    #prior covariance for the bottom time series
+    bottomVar <- sigma[bottomIdx]^2
+    priorCov <- diag(bottomVar)
     
-    #next row is necessary to finalize the covariance matrix of y
-    for (i in 1:length(upperIdx)) {
-      Sigma_y[i,i] <- sigma[upperIdx[i]]^2
-    }
-    Sigma_y[is.na(Sigma_y)] <- 0  
-    #Sigma_y  is now instantiated
+    
+    #covariance for the upper time series
+    upperVar <- sigma[upperIdx]^2
+    Sigma_y <- diag(upperVar)
     
     
     #==update in a single shot
