@@ -5,6 +5,7 @@ hier <- function (hierTs, h=1, fmethod="ets"){
   
   #TODO: check how to compute percentages
   library(hts)
+  source("loadTourism.R")
   
   #The buReconcile function computes the bu prediction given the predictions (1 x tot time series) and the S matrix
   #(tot time series X bottom time series)
@@ -41,6 +42,13 @@ hier <- function (hierTs, h=1, fmethod="ets"){
   
   #extract the time from the data set to then split into train / test (test set contains 25 or 5 time points)
   set.seed(seed = 0)
+  
+  if (hierTs=="tourism"){
+    hierTs <- loadTourism()
+  }
+  
+  
+  
   testSize <- 25
   if (length(hierTs$bts[,1]) < 25){
     testSize <- 5
