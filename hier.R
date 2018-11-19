@@ -1,11 +1,23 @@
-hier <- function (hierTs, h=1, fmethod="ets"){
-  #given the hierTs data set, reconciles the h-steps ahead forecast 
+hier <- function (dset, h=1, fmethod="ets", fpe=FALSE){
+  #given the hierTs data set ("tourism","infantgts","htseg2"), reconciles the h-steps ahead forecast 
   #fmethod can be "ets" or "arima"
   #code support also "rw" method but that case is uninteresting: no reconciliation is necessary
+  #FPE is a flag: whether the original sigma is used, or the sigma penalized using FPE.
   
   #TODO: check how to compute percentages
+  #TODO: perfs by level
+  #TODO: thief
+  
   library(hts)
   source("loadTourism.R")
+  
+  if (is.character(dset) == FALSE) {
+    stop ("dset should be a string")
+  }
+  if (fpe == TRUE) {
+    if (! (fmethod=="ets") )
+      stop ("fpe only works with ets")
+  }
   
   #The buReconcile function computes the bu prediction given the predictions (1 x tot time series) and the S matrix
   #(tot time series X bottom time series)
@@ -43,8 +55,17 @@ hier <- function (hierTs, h=1, fmethod="ets"){
   #extract the time from the data set to then split into train / test (test set contains 25 or 5 time points)
   set.seed(seed = 0)
   
-  if (hierTs=="tourism"){
+  if (dset=="tourism"){
     hierTs <- loadTourism()
+  }
+  else if (dset=="htseg1"){
+    hierTs <- htseg1
+  }
+  else if (dset=="htseg2"){
+    hierTs <- htseg2
+  }
+  else if (dset=="infantgts"){
+    hierTs <- infantgts
   }
   
   
@@ -87,7 +108,7 @@ hier <- function (hierTs, h=1, fmethod="ets"){
     #compute, for each  ts, predictions and sigma (h-steps ahead) 
     for (i in 1:numTs){
       if (fmethod=="ets"){
-        model <- ets (ts(allTsTrain[,i]))
+        model <- ets (ts(allTsTrain[,i]), additive.only = TRUE)
         tmp <- forecast (model, h=h, level=1-alpha)
       }
       else if (fmethod=="arima"){
@@ -96,6 +117,18 @@ hier <- function (hierTs, h=1, fmethod="ets"){
       }
       preds[i] <- tmp$mean[h]
       sigma[i] <- abs ( (tmp$mean[h] - tmp$upper[h])  / (qnorm(alpha / 2)) )
+      if (fpe){
+        #lenght of time series
+        n <- dim(train$bts)[1]
+        #p = model pars + sigma
+        p <- length(model$par) + 1
+        #fix for  very short time series
+        if (p == n){
+          p <- length(model$par) 
+        }
+        sigma[i] <- sigma[i] * sqrt ( (n + p) / (n - p) )
+      }
+      
     }
     
     S <- smatrix(train)
@@ -160,10 +193,11 @@ hier <- function (hierTs, h=1, fmethod="ets"){
   idx <- 1:12
   dataFrame <- data.frame(matrix(data=unlist(myList)[idx],nrow = 1, ncol = length(idx)))
   colnames(dataFrame) <- names(myList)[idx]
-  dataFrame$dset <- deparse(substitute(hierTs))
+  dataFrame$dset <- dset
   dataFrame$fmethod <- fmethod
   dataFrame$h <- h
-  dataFrame <- dataFrame[, c((length(idx)+1):(length(idx)+3), 1:length(idx))]
+  dataFrame$fpe <- fpe
+  dataFrame <- dataFrame[, c((length(idx)+1):(length(idx)+4), 1:length(idx))]
   
   filename <- "hierResults.csv"
   writeNames <- TRUE
@@ -173,10 +207,10 @@ hier <- function (hierTs, h=1, fmethod="ets"){
   
   write.table(dataFrame, file=filename, append = TRUE, sep=",", row.names = FALSE, col.names = writeNames)
   return (myList)
-
   
-    
+  
+  
 }
-  
-  
+
+
 
