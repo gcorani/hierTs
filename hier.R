@@ -1,8 +1,7 @@
-hier <- function (dset, h=1, fmethod="ets", fpe=FALSE){
+hier <- function (dset, h=1, fmethod="ets"){
   #given the hierTs data set ("tourism","infantgts","htseg2"), reconciles the h-steps ahead forecast 
   #fmethod can be "ets" or "arima"
   #code support also "rw" method but that case is uninteresting: no reconciliation is necessary
-  #FPE is a flag: whether the original sigma is used, or the sigma penalized using FPE.
   
   #TODO: check how to compute percentages
   #TODO: perfs by level
@@ -13,10 +12,6 @@ hier <- function (dset, h=1, fmethod="ets", fpe=FALSE){
   
   if (is.character(dset) == FALSE) {
     stop ("dset should be a string")
-  }
-  if (fpe == TRUE) {
-    if (! (fmethod=="ets") )
-      stop ("fpe only works with ets")
   }
   
   #The buReconcile function computes the bu prediction given the predictions (1 x tot time series) and the S matrix
@@ -117,18 +112,6 @@ hier <- function (dset, h=1, fmethod="ets", fpe=FALSE){
       }
       preds[i] <- tmp$mean[h]
       sigma[i] <- abs ( (tmp$mean[h] - tmp$upper[h])  / (qnorm(alpha / 2)) )
-      if (fpe){
-        #lenght of time series
-        n <- dim(train$bts)[1]
-        #p = model pars + sigma
-        p <- length(model$par) + 1
-        #fix for  very short time series
-        if (p == n){
-          p <- length(model$par) 
-        }
-        sigma[i] <- sigma[i] * sqrt ( (n + p) / (n - p) )
-      }
-      
     }
     
     S <- smatrix(train)
@@ -196,7 +179,6 @@ hier <- function (dset, h=1, fmethod="ets", fpe=FALSE){
   dataFrame$dset <- dset
   dataFrame$fmethod <- fmethod
   dataFrame$h <- h
-  dataFrame$fpe <- fpe
   dataFrame <- dataFrame[, c((length(idx)+1):(length(idx)+4), 1:length(idx))]
   
   filename <- "hierResults.csv"
