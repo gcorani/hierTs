@@ -1,7 +1,9 @@
-thier <- function (ts="usdeaths", fmethod="ets"){
+thier <- function (tsObj, fmethod="ets", type){
   #given a time series, creates all the possible higher-level aggregations 
   # and then computes the reconciled forecasts
   #fmethod can be "ets" or "arima"
+  #ts is an object in the M3comp format
+  #type can be "monthly" or "quarterly"
   
   library(fpp2)
   library(hts)
@@ -10,55 +12,57 @@ thier <- function (ts="usdeaths", fmethod="ets"){
   
   #computes mae for temporal hierarchies
   #both actual and forecast are temporal hierarchies
-  tHierMae <- function (actual, forecast){
+  tHierMae <- function (actual, forecast) {
     hierMae <- vector(length = length(forecast))
     for (i in seq_along(forecast)) {
       hierMae[i] <- mean( abs (forecast[[i]]$mean - actual[[i]]) )
     }
-    return (tHierMae)
+    return (hierMae)
   }
+ 
   
   #builds the A matrix, which indicates  which bottom time series sum up to each upper time series.
   buildMatrix <- function() {
     A <- matrix(data = 0, nrow = length(upperIdx), ncol = length(bottomIdx))
-    maxFreq <- frequency(trainTs[[1]])
+    maxFreq <- frequency(trainHier[[1]])
     counter <- 1
-    for (ii in (2:length(trainTs))){
-      currentFreq <- frequency(trainTs[[ii]])
-      aggregatedTs <- maxFreq / currentFreq
+    for (ii in (2:length(trainHier))){
+      currentFreq <- frequency(trainHier[[ii]])
+      aggregatedTs <- currentFreq
+      howManyBottomToSum <- maxFreq / currentFreq
       offset <- 1
       for (jj in (1:aggregatedTs)) {
-        A[counter, offset : (offset + currentFreq - 1)] <- 1
-        offset <- offset + currentFreq
+        A[counter, offset : (offset + howManyBottomToSum - 1)] <- 1
+        offset <- offset + howManyBottomToSum
+        counter <- counter + 1
       }
     }
+    return (t(A))
   }
   
   
   #coverage of the PI is 0.8
   alpha <- 0.2
+  train <- tsObj$x
+  #we need to force the test to be as long as exactly one period 
+  timeIdx <- time(tsObj$xx)
+  test <- window(tsObj$xx, end=timeIdx[frequency(tsObj$xx)])
+
   
-  #both lines temporary
-  ts <- usdeaths
-  tsName <- "pippo"
   
-  #predict one full season ahead (12 months or 4 quarters etc)
-  timeIdx <- time(ts)
-  endTrain <- length(timeIdx) - frequency(ts)
-  train <- window(ts, start = timeIdx[1], end = timeIdx[endTrain] )
-  test <- window(ts, start =timeIdx[endTrain +1])
-  
-  trainTs <- tsaggregates(train)
-  testTs <- tsaggregates(test)
+  trainHier <- tsaggregates(train)
+  testHier <- tsaggregates(test)
   
   # Compute forecasts one full season ahead
   fc <- list()
-  for(i in seq_along(trainTs)){
+  for(i in seq_along(trainHier)){
+    #how many test observations are available
+    h=length(testHier[[i]])
     if (fmethod == "ets") {
-      fc[[i]] <- forecast(ets(trainTs[[i]]), h=frequency(trainTs[[i]]), level = (1-alpha))
+      fc[[i]] <- forecast(ets(trainHier[[i]]), h=h, level = (1-alpha))
     }
     else if (fmethod == "arima") {
-      fc[[i]] <- forecast(auto.arima(aggts[[i]]), h=2*frequency(aggts[[i]]))
+      fc[[i]] <- forecast(auto.arima(trainHier[[i]]), h=h, , level = (1-alpha))
     }
   }
   
@@ -69,8 +73,8 @@ thier <- function (ts="usdeaths", fmethod="ets"){
   #Reconcile using the Bayesian approach
   #how many predictions we manage within the hierarchy
   numTs <- 0
-  for (i in seq_along(trainTs) ){
-    numTs <- numTs + frequency(trainTs[[i]])
+  for (i in seq_along(trainHier) ){
+    numTs <- numTs + frequency(trainHier[[i]])
   }
   
   #recover sigma and mean of each prediction
@@ -95,19 +99,6 @@ thier <- function (ts="usdeaths", fmethod="ets"){
     offset <- offset + currentLenght
   }
   
-  #setup the S matrix (code from combine.R of thief package)
-  freq <- unlist(lapply(trainTs,frequency))
-  m <- max(freq)
-  nsum <- rev(rep(m/freq, freq))
-  unsum <- unique(nsum)
-  grps <- matrix(0, nrow=length(unsum)-1, ncol=m)
-  for(i in 1:(length(unsum)-1))
-  {
-    mi <- m/unsum[i]
-    grps[i,] <- rep(1:mi, rep(unsum[i],mi))
-  }
-  ##== do not know if above code helpful
-  
   #the time series in the first element of the list are the bottom ones.
   priorMean <- fc[[1]]$mean
   #prior covariance for the bottom time series
@@ -122,19 +113,50 @@ thier <- function (ts="usdeaths", fmethod="ets"){
   Sigma_y <- diag(upperVar)
   A <- buildMatrix()
   
-  #==update in a single shot
-  #A explains how to combin the bottom series in order to obtain the
-  # upper series
-  A <- t(S[upperIdx,])
-  
+
+  #this code copied from hier.R
   correl <- priorCov %*% A %*%
     solve (t(A) %*% priorCov %*% A + Sigma_y)
   
   postMean <- priorMean + correl  %*%
     (Y_vec - t(A) %*% priorMean)
-  bayesPreds <- buReconcile(postMean, S, predsAllTs = FALSE)
-  maeBayes[iTest,] = abs (allts(test)[h,] - bayesPreds) 
   
+  #pay attention: we only overwrite the point forecast for the bottom time series,
+  #without managing the covariance
+  bayesFc <- fc
+  bayesFc[[1]]$mean <- postMean
+  bayesReconc <- reconcilethief(bayesFc, comb = "bu")
+  
+  #prepare the data to be saved
+  #Header of the results
+  #extract a string describing each frequency
+  freqNames <- names(lapply(testHier, frequency))
+  methodsNames <- c("Bu","Thief","Bayes")
+  #title: mae for each method, for each frequency
+  columnNames <- vector(length = length(methodsNames) * length(freqNames))
+  
+  counter <- 1
+  for (mName in methodsNames){
+    for (fName in freqNames){
+      columnNames[counter] <- paste(mName,fName,sep = "_")
+      counter <- counter + 1
+    }
+  }
+  
+  #vector containing the mae of each method in each level
+  tmp <- as.vector(cbind(tHierMae(testHier, buReconc), tHierMae(testHier, thiefReconc), tHierMae(testHier, bayesReconc)))
+  dataFrame <- as.data.frame(t(tmp))
+  colnames(dataFrame) <- columnNames
+  dataFrame$tsName <- tsObj$sn
+  idx <- c(ncol(dataFrame), 1:length(tmp))
+  dataFrame <- dataFrame[,idx]
+
+  filename <- paste("temporalHier","_",type,"_",fmethod,".csv",sep = "")
+  writeNames <- TRUE
+  if(file.exists(filename)){
+    writeNames <- FALSE
+  }
+  write.table(dataFrame, file=filename, append = TRUE, sep=",", row.names = FALSE, col.names = writeNames)
 }
 
 
