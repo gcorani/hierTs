@@ -1,9 +1,9 @@
-thier <- function (tsObj, fmethod="ets", type){
+thier <- function (tsObj, fmethod="ets", periodType="monthly"){
   #given a time series, creates all the possible higher-level aggregations 
   # and then computes the reconciled forecasts
   #fmethod can be "ets" or "arima"
-  #ts is an object in the M3comp format
-  #type can be "monthly" or "quarterly"
+  #tsObj is an object in the M3comp format
+  #periodType can be "monthly" or "quarterly"
   
   library(fpp2)
   library(hts)
@@ -43,13 +43,11 @@ thier <- function (tsObj, fmethod="ets", type){
   
   #coverage of the PI is 0.8
   alpha <- 0.2
+  
   train <- tsObj$x
   #we need to force the test to be as long as exactly one period 
   timeIdx <- time(tsObj$xx)
   test <- window(tsObj$xx, end=timeIdx[frequency(tsObj$xx)])
-
-  
-  
   trainHier <- tsaggregates(train)
   testHier <- tsaggregates(test)
   
@@ -151,7 +149,7 @@ thier <- function (tsObj, fmethod="ets", type){
   idx <- c(ncol(dataFrame), 1:length(tmp))
   dataFrame <- dataFrame[,idx]
 
-  filename <- paste("temporalHier","_",type,"_",fmethod,".csv",sep = "")
+  filename <- paste("temporalHier","_",periodType,"_",fmethod,".csv",sep = "")
   writeNames <- TRUE
   if(file.exists(filename)){
     writeNames <- FALSE

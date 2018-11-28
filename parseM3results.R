@@ -1,7 +1,10 @@
-parseM3Results <- function (type="monthly"){
+parseM3Results <- function (type="monthly", fmethod="ets"){
   library(readr)
   filename <- paste("temporalHier","_",type,"_",fmethod,".csv",sep = "")
   results <- read_csv(filename)
+  if (type=="weekly"){
+    freqs <- c("_Weekly","_2-Weekly","_4-Weekly","_Quarterly","_Biannual","_Annual")
+  }
   if (type=="monthly"){
     freqs <- c("_Monthly","_2-Monthly","_4-Monthly","_Biannual","_Annual")
   }
@@ -28,7 +31,6 @@ parseM3Results <- function (type="monthly"){
       colMy <- intersect(grep(myMethod,names) , grep(freq,names))
       
       favorableSign[counter] <- mean (results[,colBase] > results[,colMy] )
-      pValueSign[counter] <- binom.test (sum(results[,colBase] > results[,colMy]), nrow(results))$p.value
       
       #computing the improvIndicator
       #unfortunaltely, this yields a single-columns *data frame* which we then have to cast as a vector
@@ -51,12 +53,9 @@ parseM3Results <- function (type="monthly"){
   favorableSign <- as.data.frame(t(favorableSign)) 
   colnames(favorableSign) <- improvNames
   
-  pValueSign <- as.data.frame(t(pValueSign)) 
-  colnames(pValueSign) <- improvNames
-  
   pValueTtest <- as.data.frame(t(pValueTtest)) 
   colnames(pValueTtest) <- improvNames
   
-  return (list("favorableSign" = favorableSign, "pValueTtest" = pValueTtest, "pValueSign" = pValueSign, "meanImprovement" = meanImprovement,
-               "improvIndicator"=improvIndicator ) )
+  return (list("favorableSign" = favorableSign, "meanImprovement" = meanImprovement,
+               "pValueTtest" = pValueTtest, "improvIndicator"=improvIndicator ) )
 }
