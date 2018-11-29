@@ -12,14 +12,23 @@ thier <- function (tsObj, fmethod="ets", periodType="monthly"){
   
   #computes mae for temporal hierarchies
   #both actual and forecast are temporal hierarchies
-  tHierMae <- function (actual, forecast) {
+  #it  averages the  different time series having the same frequency
+  getHierMae <- function (actual, forecast) {
     hierMae <- vector(length = length(forecast))
     for (i in seq_along(forecast)) {
       hierMae[i] <- mean( abs (forecast[[i]]$mean - actual[[i]]) )
     }
     return (hierMae)
   }
- 
+  
+  globalMse <- function (actual, forecast) {
+    mse <- 0
+    for (i in seq_along(forecast)) {
+      mse <- mse + sum ( (forecast[[i]]$mean - actual[[i]])^2 )
+    }
+    return (mse)
+  }
+  
   
   #builds the A matrix, which indicates  which bottom time series sum up to each upper time series.
   buildMatrix <- function() {
@@ -44,11 +53,13 @@ thier <- function (tsObj, fmethod="ets", periodType="monthly"){
   #coverage of the PI is 0.8
   alpha <- 0.2
   
+  #default test set for the M3 is 18 months for the monthly (tp be adapted) and 8 quarters for the quarterly.
+  #for the moment force the test to be as long as exactly one period 
+  #we should implement a mechanism for doing repeated predictions
   train <- tsObj$x
-  #we need to force the test to be as long as exactly one period 
+  trainHier <- tsaggregates(train)
   timeIdx <- time(tsObj$xx)
   test <- window(tsObj$xx, end=timeIdx[frequency(tsObj$xx)])
-  trainHier <- tsaggregates(train)
   testHier <- tsaggregates(test)
   
   # Compute forecasts one full season ahead
@@ -111,7 +122,7 @@ thier <- function (tsObj, fmethod="ets", periodType="monthly"){
   Sigma_y <- diag(upperVar)
   A <- buildMatrix()
   
-
+  
   #this code copied from hier.R
   correl <- priorCov %*% A %*%
     solve (t(A) %*% priorCov %*% A + Sigma_y)
@@ -142,13 +153,20 @@ thier <- function (tsObj, fmethod="ets", periodType="monthly"){
   }
   
   #vector containing the mae of each method in each level
-  tmp <- as.vector(cbind(tHierMae(testHier, buReconc), tHierMae(testHier, thiefReconc), tHierMae(testHier, bayesReconc)))
+  tmp <- as.vector(cbind(getHierMae(testHier, buReconc), getHierMae(testHier, thiefReconc), getHierMae(testHier, bayesReconc)))
   dataFrame <- as.data.frame(t(tmp))
   colnames(dataFrame) <- columnNames
+  dataFrame$mseBase <- globalMse(testHier, fc)
+  dataFrame$mseBu <- globalMse(testHier, buReconc)
+  dataFrame$mseThief <- globalMse(testHier, thiefReconc)
+  dataFrame$mseBayes <- globalMse(testHier, bayesReconc)
+  
+  
+  
   dataFrame$tsName <- tsObj$sn
-  idx <- c(ncol(dataFrame), 1:length(tmp))
+  idx <- c(ncol(dataFrame), 1:(ncol(dataFrame)-1))
   dataFrame <- dataFrame[,idx]
-
+  
   filename <- paste("temporalHier","_",periodType,"_",fmethod,".csv",sep = "")
   writeNames <- TRUE
   if(file.exists(filename)){

@@ -17,7 +17,7 @@ batchM3 <- function(type="monthly",fmethod="ets"){
   
   for (i in seq_along(M3.selected)) {
     print(M3.selected[[i]]$sn)
-    thier(M3.selected[[i]],fmethod=fmethod, type=type)
+    thier(M3.selected[[i]],fmethod=fmethod, periodType=type)
   }
   
 }

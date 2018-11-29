@@ -22,6 +22,8 @@ parseM3Results <- function (type="monthly", fmethod="ets"){
   pValueSign <- vector(length = comparisons)
   pValueTtest <- vector(length = comparisons)
   meanImprovement <- vector(length = comparisons)
+  isMseImproved  <- vector(length = comparisons)
+  mseImprovement  <- vector(length = comparisons)
   counter <- 1
   
   for (method in baseMethods) {
@@ -40,6 +42,7 @@ parseM3Results <- function (type="monthly", fmethod="ets"){
       improvIndicator[,counter] <- currentImprovement
       meanImprovement[counter] <- mean (currentImprovement)
       pValueTtest[counter] <- t.test (currentImprovement, alternative = "greater")$p.value
+      isMseImproved[counter] <- mean()
       counter <- counter + 1
     }
   }

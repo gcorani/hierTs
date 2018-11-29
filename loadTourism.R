@@ -1,6 +1,6 @@
 loadTourism  <- function() {
-  library(tidyverse)
-  tourism <- read_csv("TourismData_v3.csv", 
+  # library(tidyverse)
+  tourism <- read.csv("TourismData_v3.csv", 
                       na = "empty")
   
   #the first two columns contain the time
