@@ -1,13 +1,21 @@
 hier <- function (dset, h=1, fmethod="ets"){
   #given the hierTs data set ("tourism","infantgts","htseg2"), reconciles the h-steps ahead forecast 
   #fmethod can be "ets" or "arima"
-  #TODO: perfs by level
   
   library(hts)
   source("loadTourism.R")
   
   if (is.character(dset) == FALSE) {
     stop ("dset should be a string")
+  }
+  
+  #for tsCV
+  fets <- function(x, h) {
+    forecast(ets(x), h = h)
+  }
+  
+  farima <- function(x, h) {
+    forecast(auto.arima(x), h=h)
   }
   
   #The buReconcile function computes the bu prediction given the predictions (1 x tot time series) and the S matrix
@@ -76,6 +84,7 @@ hier <- function (dset, h=1, fmethod="ets"){
   possiblePreds <- testSize - h + 1
   
   totTs       <- nrow(smatrix(hierTs))
+  maeBase     <- matrix(nrow = possiblePreds, ncol = totTs)
   maeBu       <- matrix(nrow = possiblePreds, ncol = totTs)
   maeComb     <- matrix(nrow = possiblePreds, ncol = totTs)
   maeCombWls  <- matrix(nrow = possiblePreds, ncol = totTs)
@@ -83,21 +92,40 @@ hier <- function (dset, h=1, fmethod="ets"){
   maeBayes    <- matrix(nrow = possiblePreds, ncol = totTs)
   
   #These vectors will contain the global mse, summed over all the time series of the hierarchy
+  mseBase     <- vector(length   = possiblePreds)
   mseBu       <- vector(length   = possiblePreds)
   mseComb     <- vector(length   = possiblePreds)
   mseCombWls  <- vector(length   = possiblePreds)
   mseCombMint <- vector(length   = possiblePreds)
   mseBayes    <- vector(length   = possiblePreds)
   
+  elapsedBase     <- vector(length   = possiblePreds)
+  elapsedBu     <- vector(length   = possiblePreds)
+  elapsedComb     <- vector(length   = possiblePreds)
+  elapsedCombMint  <- vector(length   = possiblePreds)
+  elapsedBayes    <- vector(length   = possiblePreds)
+  
+  
   for (iTest in 1:possiblePreds) {
     timeIdx             <- time(hierTs$bts[,1])
     endTrain            <- length(timeIdx) - h - (iTest - 1)
     train               <- window(hierTs, start = timeIdx[1], end = timeIdx[endTrain] )
     test                <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
+    
+    ptm <- proc.time()
     fcastBu             <- forecast(train, h = h, method = "bu", fmethod = fmethod)
+    elapsedBu[iTest] <- (proc.time() - ptm)["elapsed"]
+    
+    ptm <- proc.time()
     fcastComb           <- forecast(train, h = h, method = "comb", weights="ols", fmethod=fmethod)
+    elapsedComb[iTest] <- (proc.time() - ptm)["elapsed"]
+
     fcastCombWls        <- forecast(train, h = h, method = "comb", weights="wls", fmethod=fmethod)
+    
+    ptm <- proc.time()
     fcastCombMint       <- forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod)
+    elapsedCombMint[iTest] <- (proc.time() - ptm)["elapsed"]
+    
     maeBu[iTest,]       <- hierMae(fcastBu, test )
     maeComb[iTest,]     <- hierMae(fcastComb, test )
     maeCombWls[iTest,]  <- hierMae(fcastCombWls, test )
@@ -113,10 +141,13 @@ hier <- function (dset, h=1, fmethod="ets"){
     alpha <- 0.2
     sigma <- vector(length = numTs)
     preds <- vector(length = numTs)
+    
     #compute, for each  ts, predictions and sigma (h-steps ahead) 
+    ptm <- proc.time()
     for (i in 1:numTs){
       if (fmethod=="ets"){
-        model <- ets(ts(allTsTrain[,i]), additive.only = TRUE)
+        # print(paste(as.character(i),"/",as.character(numTs)))
+        model <- ets(ts(allTsTrain[,i]))
         tmp <- forecast(model, h=h, level=1-alpha)
       }
       else if (fmethod=="arima"){
@@ -126,9 +157,13 @@ hier <- function (dset, h=1, fmethod="ets"){
       preds[i] <- tmp$mean[h]
       sigma[i] <- abs ( (tmp$mean[h] - tmp$upper[h])  / (qnorm(alpha / 2)) )
     }
+    elapsedBase[iTest] <- (proc.time() - ptm)["elapsed"]
+    maeBase[iTest,] = abs (allts(test)[h,] - preds) 
+    mseBase[iTest] =  mean  ( (allts(test)[h,] - preds)^2 )
+      
     
     S <- smatrix(train)
-    
+    ptm <- proc.time()
     #Bayesian reconciliation
     bottomIdx <- seq( nrow(S) - ncol(S) +1, nrow(S))
     upperIdx <- setdiff(1:nrow(S),bottomIdx)
@@ -159,35 +194,43 @@ hier <- function (dset, h=1, fmethod="ets"){
     postMean <- priorMean + correl  %*%
       (Y_vec - t(A) %*% priorMean)
     bayesPreds <- buReconcile(postMean, S, predsAllTs = FALSE)
+    elapsedBayes[iTest] <- (proc.time() - ptm)["elapsed"]
     maeBayes[iTest,] = abs (allts(test)[h,] - bayesPreds) 
-    mseBayes[iTest] = mse <- mean  ( (allts(test)[h,] - bayesPreds)^2 )
+    mseBayes[iTest] =  mean  ( (allts(test)[h,] - bayesPreds)^2 )
   }
   
   myList <- list (
+    "signBetterBase"  =mean(maeBayes<maeBase),
     "signBetterBu"  =mean(maeBayes<maeBu),
     "signBetterComb" = mean(maeBayes<maeComb),
     "signBetterCombWls" = mean(maeBayes<maeCombWls),
     "signBetterCombMint"= mean(maeBayes<maeCombMint),
     
+    "TotalMaeImprovBase"   =   sum(maeBase - maeBayes)       / (sum(maeBase + maeBayes) /2),
     "TotalMaeImprovBu"   =   sum(maeBu - maeBayes)       / (sum(maeBu + maeBayes) /2),
     "TotalMaeImprovComb" =  sum(maeComb - maeBayes)     / (sum(maeComb + maeBayes) /2),
     "TotalMaeImprovWls"  =  sum(maeCombWls - maeBayes)  / (sum(maeCombWls + maeBayes) /2),
     "TotalMaeImprovMint" =  sum(maeCombMint - maeBayes) / (sum(maeCombMint + maeBayes) /2),
     
+    "EachTsMaeImprovBu"  = mean ( (maeBase-maeBayes)/ ((maeBase+maeBayes)/2) ),
     "EachTsMaeImprovBu"  = mean ( (maeBu-maeBayes)/ ((maeBu+maeBayes)/2) ),
     "EachTsMaeImprovComb"= mean ( (maeComb-maeBayes)/ ((maeComb+maeBayes)/2) ),
     "EachTsMaeImprovWls"=  mean ( (maeCombWls-maeBayes)/ ((maeCombWls+maeBayes)/2) ),
     "EachTsMaeImprovMint"= mean ( (maeCombMint-maeBayes)/ ((maeCombMint+maeBayes)/2) ),
     
-    "mseBu"=mean(mseBu), "mseComb"=mean(mseComb), "mseCombWls"=mean(mseCombWls), "mseCombMint"=mean(mseCombMint),"mseBayes"=mean(mseBayes), 
-    "maeBu"=maeBu, "maeComb"=maeComb, "maeCombWls"=maeCombWls, "maeCombMint"=maeCombMint, "maeBayes"=maeBayes
+    "mseBase"=mean(mseBase),"mseBu"=mean(mseBu), "mseComb"=mean(mseComb), "mseCombWls"=mean(mseCombWls), "mseCombMint"=mean(mseCombMint),"mseBayes"=mean(mseBayes), 
+    "maeBase"=maeBase,"maeBu"=maeBu, "maeComb"=maeComb, "maeCombWls"=maeCombWls, "maeCombMint"=maeCombMint, "maeBayes"=maeBayes,
+    
+    "elapsedBase"=mean(elapsedBase),"elapsedBu"=mean(elapsedBu),
+    "elapsedComb"=mean(elapsedComb),"elapsedCombMint"=mean(elapsedCombMint),
+    "elapsedBayes"=mean(elapsedBayes)
   )
   
   
   
   #save to file the results
   #fields to be dumped
-  idx <- 1:17
+  idx <- 1:length(myList)
   dataFrame <- data.frame(matrix(data=unlist(myList)[idx],nrow = 1, ncol = length(idx)))
   colnames(dataFrame) <- names(myList)[idx]
   dataFrame$dset <- dset

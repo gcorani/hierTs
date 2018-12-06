@@ -15,6 +15,7 @@ batchAE <- function(fmethod="arima"){
     startTest <- time(AEdemand[,i])[n - freq +1]
     train <- window(AEdemand[,i], end=endTrain) 
     test <- window(AEdemand[,i], start=startTest) 
+    tsObj<- list()
     tsObj$x <- train
     tsObj$xx <- test
     tsObj$sn <- colnames(AEdemand)[i]

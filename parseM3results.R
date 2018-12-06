@@ -1,8 +1,11 @@
 parseM3Results <- function (type="monthly", fmethod="ets"){
   library(readr)
-  filename <- paste("temporalHier","_",type,"_",fmethod,".csv",sep = "")
+  filename <- paste("results/temporalHier","_",type,"_",fmethod,".csv",sep = "")
   results <- read_csv(filename)
   if (type=="weekly"){
+    warning("the AE experiment is not over multiple repetitions, 
+            you should end up with a single number. the script
+            interprets each AE ts as an experiment")
     freqs <- c("_Weekly","_2-Weekly","_4-Weekly","_Quarterly","_Biannual","_Annual")
   }
   if (type=="monthly"){
@@ -20,7 +23,6 @@ parseM3Results <- function (type="monthly", fmethod="ets"){
   improvNames <- vector(length = comparisons)
   favorableSign <- vector(length = comparisons)
   pValueSign <- vector(length = comparisons)
-  pValueTtest <- vector(length = comparisons)
   meanImprovement <- vector(length = comparisons)
   isMseImproved  <- vector(length = comparisons)
   mseImprovement  <- vector(length = comparisons)
@@ -41,8 +43,6 @@ parseM3Results <- function (type="monthly", fmethod="ets"){
       currentImprovement <- currentImprovement[,1]
       improvIndicator[,counter] <- currentImprovement
       meanImprovement[counter] <- mean (currentImprovement)
-      pValueTtest[counter] <- t.test (currentImprovement, alternative = "greater")$p.value
-      isMseImproved[counter] <- mean()
       counter <- counter + 1
     }
   }
@@ -56,9 +56,42 @@ parseM3Results <- function (type="monthly", fmethod="ets"){
   favorableSign <- as.data.frame(t(favorableSign)) 
   colnames(favorableSign) <- improvNames
   
-  pValueTtest <- as.data.frame(t(pValueTtest)) 
-  colnames(pValueTtest) <- improvNames
+  #code used for AE only and uncommented
+  # denom <- sum(results$mseBase) + sum(results$mseBu) + sum(results$mseThief) + sum(results$mseBayes)
+  # denom <- denom / 4
+  # relMseBase <- sum(results$mseBase)/denom
+  # relMseBu <- sum(results$mseBu)/denom
+  # relMseThief <- sum(results$mseThief)/denom
+  # relMseBayes <- sum(results$mseBayes)/denom
+
+  
+  #generate the bplot
+  pdfname <- paste("results/temporalHier","_",type,"_",fmethod,".pdf",sep = "")
+  pdf(pdfname) 
+  denom <- results$mseBase 
+  a <-  cbind(results$mseBu/denom, 
+              results$mseThief/denom, results$mseBayes/denom)
+  boxplot(log10(a),names=c("bu","thief","bayes"), outline=TRUE, ylab="Relative MSE (log10)")
+  dev.off()
+  
+  # Scatter plot, commented out
+  # pdfname <- paste("results/scatterBayesThier","_",type,"_",fmethod,".pdf",sep = "")
+  # pdf(pdfname)
+  # if (type=="monthly"){
+  # plot(results$mseThief,results$mseBayes, xlab = "mse (thief)",
+  #      ylab="mse(Bayes)", xlim = c(0,1e+9), ylim= c(0,1e+9))
+  # }
+  # else if (type=="quarterly"){
+  #   plot(results$mseThief,results$mseBayes, xlab = "mse (thief)",
+  #        ylab="mse(Bayes)", xlim = c(0,1e+8), ylim= c(0,1e+8))
+  # }
+  # abline(0,1)
+  # dev.off()
+  # 
+  #test comparing thief and bayes
+  wilcoxPval <- wilcox.test(a[,3],a[,4],paired = TRUE, alternative = "greater")
+  ttestPval <-  t.test(a[,3],a[,4],paired = TRUE, alternative = "greater")
   
   return (list("favorableSign" = favorableSign, "meanImprovement" = meanImprovement,
-               "pValueTtest" = pValueTtest, "improvIndicator"=improvIndicator ) )
+               "wilcoxPval" = wilcoxPval, "ttestPval"=ttestPval, "improvIndicator"=improvIndicator ) )
 }

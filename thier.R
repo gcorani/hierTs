@@ -68,7 +68,7 @@ thier <- function (tsObj, fmethod="ets", periodType="monthly"){
     #how many test observations are available
     h=length(testHier[[i]])
     if (fmethod == "ets") {
-      fc[[i]] <- forecast(ets(trainHier[[i]]), h=h, level = (1-alpha))
+      fc[[i]] <- forecast(ets(trainHier[[i]]), h=h, level = (1-alpha), additive.only = TRUE)
     }
     else if (fmethod == "arima") {
       fc[[i]] <- forecast(auto.arima(trainHier[[i]]), h=h, , level = (1-alpha))
