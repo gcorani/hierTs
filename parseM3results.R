@@ -3,9 +3,7 @@ parseM3Results <- function (type="monthly", fmethod="ets"){
   filename <- paste("results/temporalHier","_",type,"_",fmethod,".csv",sep = "")
   results <- read_csv(filename)
   if (type=="weekly"){
-    warning("the AE experiment is not over multiple repetitions, 
-            you should end up with a single number. the script
-            interprets each AE ts as an experiment")
+     warning("the AE experiment is only over 13 time series") 
     freqs <- c("_Weekly","_2-Weekly","_4-Weekly","_Quarterly","_Biannual","_Annual")
   }
   if (type=="monthly"){
@@ -89,8 +87,8 @@ parseM3Results <- function (type="monthly", fmethod="ets"){
   # dev.off()
   # 
   #test comparing thief and bayes
-  wilcoxPval <- wilcox.test(a[,3],a[,4],paired = TRUE, alternative = "greater")
-  ttestPval <-  t.test(a[,3],a[,4],paired = TRUE, alternative = "greater")
+  wilcoxPval <- wilcox.test(a[,2],a[,3],paired = TRUE, alternative = "greater")
+  ttestPval <-  t.test(a[,2],a[,3],paired = TRUE, alternative = "greater")
   
   return (list("favorableSign" = favorableSign, "meanImprovement" = meanImprovement,
                "wilcoxPval" = wilcoxPval, "ttestPval"=ttestPval, "improvIndicator"=improvIndicator ) )
