@@ -72,6 +72,25 @@ parseM3Results <- function (type="monthly", fmethod="ets"){
   boxplot(log10(a),names=c("bu","thief","bayes"), outline=TRUE, ylab="Relative MSE (log10)")
   dev.off()
   
+  #generate the bplot with ggplot2
+  library(ggplot2)
+  pdfname <- paste("results/GGPLOTtemporalHier","_",type,"_",fmethod,".pdf",sep = "")
+  denom <- results$mseBase 
+  resLenght <- length(results$mseThief/denom)
+  relMse <- rbind(matrix(results$mseBu/denom), matrix(results$mseThief/denom), matrix(results$mseBayes/denom))
+  label <-  factor(rbind(matrix(rep("Bu",resLenght)),matrix(rep("Thief",resLenght)),matrix(rep("Bayes",resLenght))),
+                   levels = c("Bu","Thief","Bayes"))
+  dataPlot <- as.data.frame(relMse)
+  dataPlot$label <- label
+  currentPlot <- ggplot(dataPlot, aes(x = label, y = log10(relMse))) + geom_boxplot()  +
+                  stat_boxplot(geom = "errorbar", width = 0.5) +  #draw the whiskers
+                           scale_x_discrete(name = "") +
+    scale_y_continuous(name = "Log10 (MSE / MSE base) ")
+  print(currentPlot)
+  ggsave(pdfname, width = 4, height = 3)
+  # boxplot(log10(a),names=c("bu","thief","bayes"), outline=TRUE, ylab="Relative MSE (log10)")
+  # dev.off()
+  
   # Scatter plot, commented out
   # pdfname <- paste("results/scatterBayesThier","_",type,"_",fmethod,".pdf",sep = "")
   # pdf(pdfname)
