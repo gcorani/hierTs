@@ -33,10 +33,10 @@ hier <- function (dset, h=1, fmethod="ets"){
     return (buPreds)
   }
   
-  hierMse <- function (htsPred, htsActual) {
+  hierMse <- function (htsPred, htsActual, h) {
     #receives two hts objects, containing  forecast and actual value.
     #computes the mse for the whole hierarchy.
-    mse <- mean  ( (allts(htsPred) - allts(htsActual)[h,])^2 )
+    mse <- mean  ( (allts(htsPred)[h,] - allts(htsActual)[h,])^2 )
     return (mse)
   }
   
@@ -67,12 +67,12 @@ hier <- function (dset, h=1, fmethod="ets"){
   #if h=2, the possible preds are the (test size lenght -1); etc.
   possiblePreds <- testSize - h + 1
   #These vectors will contain the global mse, summed over all the time series of the hierarchy
-  mseBase     <- vector(length   = possiblePreds)
-  mseBu       <- vector(length   = possiblePreds)
-  mseComb     <- vector(length   = possiblePreds)
-  mseCombWls  <- vector(length   = possiblePreds)
-  mseCombMint <- vector(length   = possiblePreds)
-  mseBayes    <- vector(length   = possiblePreds)
+  # mseBase     <- vector(length   = possiblePreds)
+  # mseBu       <- vector(length   = possiblePreds)
+  # mseComb     <- vector(length   = possiblePreds)
+  # mseCombWls  <- vector(length   = possiblePreds)
+  # mseCombMint <- vector(length   = possiblePreds)
+  # mseBayes    <- vector(length   = possiblePreds)
   
   for (iTest in 1:possiblePreds) {
     timeIdx             <- time(hierTs$bts[,1])
@@ -87,11 +87,15 @@ hier <- function (dset, h=1, fmethod="ets"){
     fcastComb           <- forecast(train, h = h, method = "comb", weights="ols", fmethod=fmethod)
     fcastCombWls        <- forecast(train, h = h, method = "comb", weights="wls", fmethod=fmethod)
     fcastCombMint       <- forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod)
-    
-    mseBu[iTest]        <- hierMse(fcastBu, test )
-    mseComb[iTest]      <- hierMse(fcastComb, test )
-    mseCombWls[iTest]   <- hierMse(fcastCombWls, test )
-    mseCombMint[iTest]  <- hierMse(fcastCombMint, test )
+    # 
+    # mseBu[iTest]        <- hierMse(fcastBu, test )
+    # mseComb[iTest]      <- hierMse(fcastComb, test )
+    # mseCombWls[iTest]   <- hierMse(fcastCombWls, test )
+    # mseCombMint[iTest]  <- hierMse(fcastCombMint, test )
+    mseBu        <- hierMse(fcastBu, test, h )
+    mseComb      <- hierMse(fcastComb, test, h )
+    mseCombWls   <- hierMse(fcastCombWls, test, h )
+    mseCombMint  <- hierMse(fcastCombMint, test,  h)
     
     #recompute predictions to be easily accessed by the Bayesian method
     allTsTrain <- allts(train)
@@ -115,7 +119,7 @@ hier <- function (dset, h=1, fmethod="ets"){
       preds[i] <- tmp$mean[h]
       sigma[i] <- abs ( (tmp$mean[h] - tmp$upper[h])  / (qnorm(alpha / 2)) )
     }
-    mseBase[iTest] =  mean  ( (allts(test)[h,] - preds)^2 )
+    mseBase =  mean  ( (allts(test)[h,] - preds)^2 )
     
     
     S <- smatrix(train)
@@ -149,24 +153,29 @@ hier <- function (dset, h=1, fmethod="ets"){
     postMean <- priorMean + correl  %*%
       (Y_vec - t(A) %*% priorMean)
     bayesPreds <- buReconcile(postMean, S, predsAllTs = FALSE)
-    mseBayes[iTest] =  mean  ( (allts(test)[h,] - bayesPreds)^2 )
+    mseBayes =  mean  ( (allts(test)[h,] - bayesPreds)^2 )
+    
+    
+    #save to file the results, at every iteration
+    dataFrame <- data.frame(h, fmethod, dset, mseBase,mseBu,mseComb,mseCombWls,mseCombMint,mseBayes)
+    filename <- "results/mseHierReconc.csv"
+    writeNames <- TRUE
+    if(file.exists(filename)){
+      writeNames <- FALSE
+    }
+    write.table(dataFrame, file=filename, append = TRUE, sep=",", row.names = FALSE, col.names = writeNames)
   }
   
   
-  h <- rep(h, possiblePreds)
-  fmethod <- rep(fmethod, possiblePreds)
-  dset <- rep(dset, possiblePreds)
-  dataFrame <- data.frame(h, fmethod, dset, mseBase,mseBu,mseComb,mseCombWls,mseCombMint,mseBayes)
+  # h <- rep(h, possiblePreds)
+  # fmethod <- rep(fmethod, possiblePreds)
+  # dset <- rep(dset, possiblePreds)
+
   
   
-  filename <- "results/mseHierReconc.csv"
-  writeNames <- TRUE
-  if(file.exists(filename)){
-    writeNames <- FALSE
-  }
-  
-  write.table(dataFrame, file=filename, append = TRUE, sep=",", row.names = FALSE, col.names = writeNames)
-  return(dataFrame)
+
+
+  # return(dataFrame)
   
 }
 
