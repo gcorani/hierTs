@@ -134,13 +134,13 @@ hier <- function (dset, h=1, fmethod="ets"){
     ptm <- proc.time()
     for (i in 1:numTs){
       if (fmethod=="ets"){
-        model <- ets(ts(allTsTrain[,i]))
+        model <- ets(allTsTrain[,i])
         tmp <- forecast(model, h=h, level=1-alpha)
-        # print(paste(as.character(i),"/",as.character(numTs)))
+        print(paste(as.character(i),"/",as.character(numTs)))
         print(model$components)
       }
       else if (fmethod=="arima"){
-        model <- auto.arima(ts(allTsTrain[,i]))
+        model <- auto.arima(allTsTrain[,i])
         tmp <- forecast(model, h=h, level=1-alpha)
       }
       preds[i] <- tmp$mean[h]
