@@ -77,32 +77,23 @@ hier <- function (dset, h=1, fmethod="ets"){
   mseCombMint <- vector(length   = possiblePreds)
   mseBayes    <- vector(length   = possiblePreds)
   
-  elapsedBase     <- vector(length   = possiblePreds)
-  elapsedBu     <- vector(length   = possiblePreds)
-  elapsedComb     <- vector(length   = possiblePreds)
-  elapsedCombMint  <- vector(length   = possiblePreds)
-  elapsedBayes    <- vector(length   = possiblePreds)
-  
-  
   for (iTest in 1:possiblePreds) {
     timeIdx             <- time(hierTs$bts[,1])
     endTrain            <- length(timeIdx) - h - (iTest - 1)
     train               <- window(hierTs, start = timeIdx[1], end = timeIdx[endTrain] )
     test                <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
     
-    ptm <- proc.time()
+    # ptm <- proc.time()
     fcastBu             <- forecast(train, h = h, method = "bu", fmethod = fmethod)
-    elapsedBu[iTest] <- (proc.time() - ptm)["elapsed"]
+    # elapsedBu[iTest] <- (proc.time() - ptm)["elapsed"]
     
-    ptm <- proc.time()
     fcastComb           <- forecast(train, h = h, method = "comb", weights="ols", fmethod=fmethod)
-    elapsedComb[iTest] <- (proc.time() - ptm)["elapsed"]
     
     fcastCombWls        <- forecast(train, h = h, method = "comb", weights="wls", fmethod=fmethod)
     
-    ptm <- proc.time()
+    # ptm <- proc.time()
     fcastCombMint       <- forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod)
-    elapsedCombMint[iTest] <- (proc.time() - ptm)["elapsed"]
+    # elapsedCombMint[iTest] <- (proc.time() - ptm)["elapsed"]
     
     mseBu[iTest]        <- hierMse(fcastBu, test )
     mseComb[iTest]      <- hierMse(fcastComb, test )
@@ -117,7 +108,6 @@ hier <- function (dset, h=1, fmethod="ets"){
     preds <- vector(length = numTs)
     
     #compute, for each  ts, predictions and sigma (h-steps ahead) 
-    ptm <- proc.time()
     for (i in 1:numTs){
       if (fmethod=="ets"){
         model <- ets(allTsTrain[,i])
@@ -132,12 +122,10 @@ hier <- function (dset, h=1, fmethod="ets"){
       preds[i] <- tmp$mean[h]
       sigma[i] <- abs ( (tmp$mean[h] - tmp$upper[h])  / (qnorm(alpha / 2)) )
     }
-    elapsedBase[iTest] <- (proc.time() - ptm)["elapsed"]
     mseBase[iTest] =  mean  ( (allts(test)[h,] - preds)^2 )
     
     
     S <- smatrix(train)
-    ptm <- proc.time()
     #Bayesian reconciliation
     bottomIdx <- seq( nrow(S) - ncol(S) +1, nrow(S))
     upperIdx <- setdiff(1:nrow(S),bottomIdx)
@@ -168,7 +156,6 @@ hier <- function (dset, h=1, fmethod="ets"){
     postMean <- priorMean + correl  %*%
       (Y_vec - t(A) %*% priorMean)
     bayesPreds <- buReconcile(postMean, S, predsAllTs = FALSE)
-    elapsedBayes[iTest] <- (proc.time() - ptm)["elapsed"]
     mseBayes[iTest] =  mean  ( (allts(test)[h,] - bayesPreds)^2 )
   }
   
