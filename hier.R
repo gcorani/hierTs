@@ -45,7 +45,7 @@ hier <- function (dset, h=1, fmethod="ets"){
   hierMse <- function (htsPred, htsActual) {
     #receives two hts objects, containing  forecast and actual value.
     #computes the mse for the whole hierarchy.
-    mse <- mean  ( ((allts(htsPred) - allts(htsActual))[h,])^2 )
+    mse <- mean  ( (allts(htsPred) - allts(htsActual)[h,])^2 )
     return (mse)
   }
   
@@ -71,6 +71,7 @@ hier <- function (dset, h=1, fmethod="ets"){
   if (length(hierTs$bts[,1]) < 25){
     testSize <- 5
   }
+  
   #if h=1, the possible preds are the whole test size lenght; 
   #if h=2, the possible preds are the (test size lenght -1); etc.
   possiblePreds <- testSize - h + 1
@@ -136,8 +137,8 @@ hier <- function (dset, h=1, fmethod="ets"){
       if (fmethod=="ets"){
         model <- ets(allTsTrain[,i])
         tmp <- forecast(model, h=h, level=1-alpha)
-        print(paste(as.character(i),"/",as.character(numTs)))
-        print(model$components)
+        # print(paste(as.character(i),"/",as.character(numTs)))
+        # print(model$components)
       }
       else if (fmethod=="arima"){
         model <- auto.arima(allTsTrain[,i])

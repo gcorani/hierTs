@@ -8,34 +8,38 @@ parseHierResults <- function (){
   horizons <- unique(results$h)
   configs <- length(fmethods) * length(dsets) * length(horizons)
   #the 7 fields are fmethod, dset, prop against each method
-  header <- c("dset","fmethod","h","propBeatBase","propBeatBu","propBeatComb",
-              "propBeatCombWls","propBeatMint")
-  favorableProps <- matrix(nrow = configs, ncol = length(header))
-  colnames(favorableProps) <- header
+  # header <- c("dset","fmethod","h","propBeatBase","propBeatBu","propBeatComb",
+              # "propBeatCombWls","propBeatMint")
+  # favorableProps <- matrix(nrow = configs, ncol = length(header))
+  
+  #we need first to instantiate the data frame with placeholder values, and then we fill the correct values
+  favorableProps <- data.frame(dset=rep(dsets[1],configs),
+                               h=rep(horizons[1],configs),
+                               fmethod=rep(fmethods[1],configs),
+                               propBeatBase=rep(-1,configs),
+                               propBeatBu=rep(-1,configs),
+                               propBeatComb=rep(-1,configs),
+                               propBeatCombWls=rep(-1,configs),
+                               propBeatMint=rep(-1,configs),
+                               stringsAsFactors = FALSE
+                               )
   
   counter <- 1
   for (dset in dsets){
     for (fmethod in fmethods){
       for (h in horizons){
         print(paste(fmethod,dset,h))
-        favorableProps[counter,"dset"] <- dset
-        favorableProps[counter,"fmethod"] <- fmethod
-        favorableProps[counter,"h"] <- h
+        favorableProps$dset[counter] <- dset
+        favorableProps$fmethod[counter] <- fmethod
+        favorableProps$h[counter] <- h
         idx = results$fmethod==fmethod & results$dset==dset & results$h==h
         if (sum(idx)>0){
           subresults <- results[idx,]
-          favorableProps[counter,"propBeatBase"] <- mean (subresults$mseBase>subresults$mseBayes)
-          favorableProps[counter,"propBeatBu"] <- mean (subresults$mseBu>subresults$mseBayes)
-          favorableProps[counter,"propBeatComb"] <- mean (subresults$mseComb>subresults$mseBayes)
-          favorableProps[counter,"propBeatCombWls"] <- mean (subresults$mseCombWls>subresults$mseBayes)
-          favorableProps[counter,"propBeatMint"] <- mean (subresults$mseCombMint>subresults$mseBayes)
-          #generate the bplot
-          # pdfname <- paste("results/hier","_",dset,"_",fmethod,"_h",h,".pdf",sep = "")
-          # pdf(pdfname) 
-          # denom <- subresults$mseBase 
-          # a <-  cbind(subresults$mseBu/denom, subresults$mseComb/denom, subresults$mseCombWls/denom, subresults$mseCombMint/denom, subresults$mseBayes/denom)
-          # boxplot(log10(a),names=c("bu","comb","combWLS","mint","Bayes"), outline=TRUE, ylab="Relative MSE (log10)")
-          # dev.off()
+          favorableProps$propBeatBase[counter] <- mean (subresults$mseBase>subresults$mseBayes)
+          favorableProps$propBeatBu[counter] <- mean (subresults$mseBu>subresults$mseBayes)
+          favorableProps$propBeatComb[counter] <- mean (subresults$mseComb>subresults$mseBayes)
+          favorableProps$propBeatCombWls[counter] <- mean (subresults$mseCombWls>subresults$mseBayes)
+          favorableProps$propBeatMint[counter] <- mean (subresults$mseCombMint>subresults$mseBayes)
           
           #generate the bplot with ggplot2
           library(ggplot2)
@@ -71,6 +75,6 @@ parseHierResults <- function (){
       }
     }
   }
-  
+  write.table(favorableProps,file="results/hierFavorableProps.csv",sep=",",row.names = FALSE)
   return (favorableProps)
 }
