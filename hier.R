@@ -66,9 +66,6 @@ hier <- function (dset, h=1, fmethod="ets"){
   #if h=1, the possible preds are the whole test size lenght; 
   #if h=2, the possible preds are the (test size lenght -1); etc.
   possiblePreds <- testSize - h + 1
-  
-  totTs       <- nrow(smatrix(hierTs))
-  
   #These vectors will contain the global mse, summed over all the time series of the hierarchy
   mseBase     <- vector(length   = possiblePreds)
   mseBu       <- vector(length   = possiblePreds)
@@ -88,12 +85,8 @@ hier <- function (dset, h=1, fmethod="ets"){
     # elapsedBu[iTest] <- (proc.time() - ptm)["elapsed"]
     
     fcastComb           <- forecast(train, h = h, method = "comb", weights="ols", fmethod=fmethod)
-    
     fcastCombWls        <- forecast(train, h = h, method = "comb", weights="wls", fmethod=fmethod)
-    
-    # ptm <- proc.time()
     fcastCombMint       <- forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod)
-    # elapsedCombMint[iTest] <- (proc.time() - ptm)["elapsed"]
     
     mseBu[iTest]        <- hierMse(fcastBu, test )
     mseComb[iTest]      <- hierMse(fcastComb, test )
