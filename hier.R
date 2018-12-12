@@ -33,15 +33,6 @@ hier <- function (dset, h=1, fmethod="ets"){
     return (buPreds)
   }
   
-  hierMae <- function (htsPred, htsActual) {
-    #receives two hts objects, containing  forecast and actual value.
-    #computes the mae for the relevant forecast horizon only
-    #Sets correctly the columns names currently not possible
-    maeHts <- abs (allts(htsPred) - allts(htsActual))[h,]
-    # colnames(maeHts) <- colnames(allts(htsPred))
-    return (maeHts)
-  }
-  
   hierMse <- function (htsPred, htsActual) {
     #receives two hts objects, containing  forecast and actual value.
     #computes the mse for the whole hierarchy.
@@ -77,12 +68,6 @@ hier <- function (dset, h=1, fmethod="ets"){
   possiblePreds <- testSize - h + 1
   
   totTs       <- nrow(smatrix(hierTs))
-  maeBase     <- matrix(nrow = possiblePreds, ncol = totTs)
-  maeBu       <- matrix(nrow = possiblePreds, ncol = totTs)
-  maeComb     <- matrix(nrow = possiblePreds, ncol = totTs)
-  maeCombWls  <- matrix(nrow = possiblePreds, ncol = totTs)
-  maeCombMint <- matrix(nrow = possiblePreds, ncol = totTs)
-  maeBayes    <- matrix(nrow = possiblePreds, ncol = totTs)
   
   #These vectors will contain the global mse, summed over all the time series of the hierarchy
   mseBase     <- vector(length   = possiblePreds)
