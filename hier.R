@@ -46,33 +46,16 @@ hier <- function (dset, h=1, fmethod="ets"){
   if (dset=="tourism"){
     hierTs <- loadTourism()
   }
-  else if (dset=="htseg1"){
-    hierTs <- htseg1
-  }
-  else if (dset=="htseg2"){
-    hierTs <- htseg2
-  }
   else if (dset=="infantgts"){
     hierTs <- infantgts
   }
   
   
-  
-  testSize <- 25
-  if (length(hierTs$bts[,1]) < 25){
-    testSize <- 5
-  }
+  testSize <- 45
   
   #if h=1, the possible preds are the whole test size lenght; 
   #if h=2, the possible preds are the (test size lenght -1); etc.
   possiblePreds <- testSize - h + 1
-  #These vectors will contain the global mse, summed over all the time series of the hierarchy
-  # mseBase     <- vector(length   = possiblePreds)
-  # mseBu       <- vector(length   = possiblePreds)
-  # mseComb     <- vector(length   = possiblePreds)
-  # mseCombWls  <- vector(length   = possiblePreds)
-  # mseCombMint <- vector(length   = possiblePreds)
-  # mseBayes    <- vector(length   = possiblePreds)
   
   for (iTest in 1:possiblePreds) {
     timeIdx             <- time(hierTs$bts[,1])
@@ -80,18 +63,11 @@ hier <- function (dset, h=1, fmethod="ets"){
     train               <- window(hierTs, start = timeIdx[1], end = timeIdx[endTrain] )
     test                <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
     
-    # ptm <- proc.time()
     fcastBu             <- forecast(train, h = h, method = "bu", fmethod = fmethod)
-    # elapsedBu[iTest] <- (proc.time() - ptm)["elapsed"]
-    
     fcastComb           <- forecast(train, h = h, method = "comb", weights="ols", fmethod=fmethod)
     fcastCombWls        <- forecast(train, h = h, method = "comb", weights="wls", fmethod=fmethod)
     fcastCombMint       <- forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod)
-    # 
-    # mseBu[iTest]        <- hierMse(fcastBu, test )
-    # mseComb[iTest]      <- hierMse(fcastComb, test )
-    # mseCombWls[iTest]   <- hierMse(fcastCombWls, test )
-    # mseCombMint[iTest]  <- hierMse(fcastCombMint, test )
+
     mseBu        <- hierMse(fcastBu, test, h )
     mseComb      <- hierMse(fcastComb, test, h )
     mseCombWls   <- hierMse(fcastCombWls, test, h )
@@ -142,7 +118,7 @@ hier <- function (dset, h=1, fmethod="ets"){
     Sigma_y <- diag(upperVar)
     
     
-    #==update in a single shot
+    #==updating
     #A explains how to combin the bottom series in order to obtain the
     # upper series
     A <- t(S[upperIdx,])
@@ -165,18 +141,6 @@ hier <- function (dset, h=1, fmethod="ets"){
     }
     write.table(dataFrame, file=filename, append = TRUE, sep=",", row.names = FALSE, col.names = writeNames)
   }
-  
-  
-  # h <- rep(h, possiblePreds)
-  # fmethod <- rep(fmethod, possiblePreds)
-  # dset <- rep(dset, possiblePreds)
-
-  
-  
-
-
-  # return(dataFrame)
-  
 }
 
 
