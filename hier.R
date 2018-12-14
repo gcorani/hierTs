@@ -33,6 +33,21 @@ hier <- function (dset, h=1, fmethod="ets"){
     return (buPreds)
   }
   
+  #check the calibration of the prediction interval with coverage (1-currentAlpha)
+  checkCalibration <- function(preds,sigmas,htsActual,coverage){
+    stdQuant <- abs(qnorm((1-coverage)/2))
+    included <- vector(length = length(preds))
+    actual <- allts(htsActual)[h,]
+    for (ii in seq_along(preds)){
+      upper <- preds[ii] + stdQuant * sigmas[ii]
+      lower <- preds[ii] - stdQuant * sigmas[ii]
+      included[ii] <- (actual[ii] > lower) &  (actual[ii] < upper)
+    }
+    return (mean(included))
+  }
+  
+  
+  
   hierMse <- function (htsPred, htsActual, h) {
     #receives two hts objects, containing  forecast and actual value.
     #computes the mse for the whole hierarchy.
@@ -98,6 +113,11 @@ hier <- function (dset, h=1, fmethod="ets"){
     mseBase =  mean  ( (allts(test)[h,] - preds)^2 )
     
     
+    calibration50 <- checkCalibration(preds, sigma, test, coverage = 0.5)
+    calibration80 <- checkCalibration(preds, sigma, test, coverage = 0.8)
+    
+    
+    
     S <- smatrix(train)
     #Bayesian reconciliation
     bottomIdx <- seq( nrow(S) - ncol(S) +1, nrow(S))
@@ -133,7 +153,7 @@ hier <- function (dset, h=1, fmethod="ets"){
     
     
     #save to file the results, at every iteration
-    dataFrame <- data.frame(h, fmethod, dset, mseBase,mseBu,mseComb,mseCombWls,mseCombMint,mseBayes)
+    dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, mseBase,mseBu,mseComb,mseCombWls,mseCombMint,mseBayes)
     filename <- "results/mseHierReconc.csv"
     writeNames <- TRUE
     if(file.exists(filename)){
