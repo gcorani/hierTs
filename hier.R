@@ -78,14 +78,15 @@ hier <- function (dset, h=1, fmethod="ets"){
     train               <- window(hierTs, start = timeIdx[1], end = timeIdx[endTrain] )
     test                <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
     
-    fcastBu             <- forecast(train, h = h, method = "bu", fmethod = fmethod)
-    fcastComb           <- forecast(train, h = h, method = "comb", weights="ols", fmethod=fmethod)
-    fcastCombWls        <- forecast(train, h = h, method = "comb", weights="wls", fmethod=fmethod)
-    fcastCombMint       <- forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod)
+    #we focus on mint only
+    # fcastBu             <- forecast(train, h = h, method = "bu", fmethod = fmethod)
+    # fcastComb           <- forecast(train, h = h, method = "comb", weights="ols", fmethod=fmethod)
+    # fcastCombWls        <- forecast(train, h = h, method = "comb", weights="wls", fmethod=fmethod)
+     fcastCombMint       <- forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod)
 
-    mseBu        <- hierMse(fcastBu, test, h )
-    mseComb      <- hierMse(fcastComb, test, h )
-    mseCombWls   <- hierMse(fcastCombWls, test, h )
+    # mseBu        <- hierMse(fcastBu, test, h )
+    # mseComb      <- hierMse(fcastComb, test, h )
+    # mseCombWls   <- hierMse(fcastCombWls, test, h )
     mseCombMint  <- hierMse(fcastCombMint, test,  h)
     
     #recompute predictions to be easily accessed by the Bayesian method
@@ -153,8 +154,8 @@ hier <- function (dset, h=1, fmethod="ets"){
     
     
     #save to file the results, at every iteration
-    dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, mseBase,mseBu,mseComb,mseCombWls,mseCombMint,mseBayes)
-    filename <- "results/mseHierReconc.csv"
+    dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, mseBase,mseCombMint,mseBayes)
+    filename <- paste("results/mseHierReconc",dset,".csv",sep="")
     writeNames <- TRUE
     if(file.exists(filename)){
       writeNames <- FALSE
