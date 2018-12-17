@@ -29,6 +29,23 @@ thier <- function (tsObj, fmethod="ets", periodType="monthly"){
     return (mse)
   }
   
+  calibration <- function (actual, forecast, sigmas) {
+    included50 <- as.vector(rep(0,length(actual)))
+    included80 <- as.vector(rep(0,length(actual)))
+    #implementation to be finalized
+    for (ii in seq_along(forecast)) {
+      upper50 <- as.numeric(fc[[i]]$upper[,"50%"])
+      lower50 <- as.numeric(fc[[i]]$lower[,"50%"])
+      included50[ii] <- (actual[ii] > lower) &  (actual[ii] < upper)
+      upper80 <- as.numeric(fc[[i]]$upper[,"80%"])
+      lower80 <- as.numeric(fc[[i]]$lower[,"80%"])
+      included80[ii] <- (actual[ii] > lower) &  (actual[ii] < upper)
+    }
+    return (mean(included50),mean(included80))
+  }
+  
+  
+  
   
   #builds the A matrix, which indicates  which bottom time series sum up to each upper time series.
   buildMatrix <- function() {
@@ -68,7 +85,8 @@ thier <- function (tsObj, fmethod="ets", periodType="monthly"){
     #how many test observations are available
     h=length(testHier[[i]])
     if (fmethod == "ets") {
-      fc[[i]] <- forecast(ets(trainHier[[i]]), h=h, level = (1-alpha), additive.only = TRUE)
+      # fc[[i]] <- forecast(ets(trainHier[[i]]), h=h, level = (1-alpha), additive.only = TRUE)
+      fc[[i]] <- forecast(ets(trainHier[[i]]), h=h, level = c(0.5,0.8), additive.only = TRUE)
     }
     else if (fmethod == "arima") {
       fc[[i]] <- forecast(auto.arima(trainHier[[i]]), h=h, , level = (1-alpha))
@@ -160,7 +178,10 @@ thier <- function (tsObj, fmethod="ets", periodType="monthly"){
   dataFrame$mseBu <- globalMse(testHier, buReconc)
   dataFrame$mseThief <- globalMse(testHier, thiefReconc)
   dataFrame$mseBayes <- globalMse(testHier, bayesReconc)
-  
+  #calibration still to be implemented: the easiest seems to ask the forecast function to already produce
+  #the relevant intervals
+  # dataFrame$calibration50 <- calibration(testHier, preds, sigma, 0.5) 
+  # dataFrame$calibration80 <- calibration(testHier, preds, sigma, 0.8) 
   
   
   dataFrame$tsName <- tsObj$sn

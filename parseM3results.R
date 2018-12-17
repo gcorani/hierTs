@@ -107,7 +107,7 @@ parseM3Results <- function (type="monthly", fmethod="ets"){
   # 
   #test comparing thief and bayes
   wilcoxPval <- wilcox.test(a[,2],a[,3],paired = TRUE, alternative = "greater")
-  ttestPval <-  t.test(a[,2],a[,3],paired = TRUE, alternative = "greater")
+  # ttestPval <-  t.test(a[,2],a[,3],paired = TRUE, alternative = "greater")
   
   return (list("favorableSign" = favorableSign, "meanImprovement" = meanImprovement,
                "wilcoxPval" = wilcoxPval, "ttestPval"=ttestPval, "improvIndicator"=improvIndicator ) )
