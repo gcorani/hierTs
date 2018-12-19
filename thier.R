@@ -85,7 +85,6 @@ thier <- function (tsObj, fmethod="ets", periodType="monthly"){
     #how many test observations are available
     h=length(testHier[[i]])
     if (fmethod == "ets") {
-      # fc[[i]] <- forecast(ets(trainHier[[i]]), h=h, level = (1-alpha), additive.only = TRUE)
       fc[[i]] <- forecast(ets(trainHier[[i]]), h=h, level = c(0.5,0.8), additive.only = TRUE)
     }
     else if (fmethod == "arima") {
@@ -188,7 +187,7 @@ thier <- function (tsObj, fmethod="ets", periodType="monthly"){
   idx <- c(ncol(dataFrame), 1:(ncol(dataFrame)-1))
   dataFrame <- dataFrame[,idx]
   
-  filename <- paste("temporalHier","_",periodType,"_",fmethod,".csv",sep = "")
+  filename <- paste("results/temporalHier","_",periodType,"_",fmethod,".csv",sep = "")
   writeNames <- TRUE
   if(file.exists(filename)){
     writeNames <- FALSE
