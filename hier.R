@@ -1,6 +1,7 @@
-hier <- function (dset, h=1, fmethod="ets"){
+hier <- function (dset, h=1, fmethod="ets", correlation="FALSE"){
   #given the hierTs data set ("tourism","infantgts"), reconciles the h-steps ahead forecast 
   #fmethod can be "ets" or "arima"
+  #if correlation is false, the covariance matrix is diagonal
   
   library(hts)
   source("loadTourism.R")
@@ -82,8 +83,8 @@ hier <- function (dset, h=1, fmethod="ets"){
     # fcastBu             <- forecast(train, h = h, method = "bu", fmethod = fmethod)
     # fcastComb           <- forecast(train, h = h, method = "comb", weights="ols", fmethod=fmethod)
     # fcastCombWls        <- forecast(train, h = h, method = "comb", weights="wls", fmethod=fmethod)
-     fcastCombMint       <- forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod)
-
+    fcastCombMint       <- forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod)
+    
     # mseBu        <- hierMse(fcastBu, test, h )
     # mseComb      <- hierMse(fcastComb, test, h )
     # mseCombWls   <- hierMse(fcastCombWls, test, h )
@@ -138,14 +139,40 @@ hier <- function (dset, h=1, fmethod="ets"){
     upperVar <- sigma[upperIdx]^2
     Sigma_y <- diag(upperVar)
     
+    #this runs with full covariance matrix
+    if (correlation){
+      for (myRow in 1:(nrow(priorCov)-1)){
+        for (myCol in (myRow+1):ncol(priorCov)){
+          if (myRow != myCol){
+            rowIdx <- bottomIdx[myRow]
+            colIdx <- bottomIdx[myCol]
+            # print(paste("rowIdx",rowIdx,"colIdx",colIdx))
+            priorCov[myRow,myCol] <- sigma[rowIdx] * sigma[colIdx] * cor(allTsTrain[,rowIdx],allTsTrain[,colIdx])
+            priorCov[myCol,myRow] <- priorCov[myRow,myCol]
+          }
+        }
+      }
+    for (myRow in 1:(nrow(Sigma_y)-1)){
+        for (myCol in (myRow+1):ncol(Sigma_y)){
+          rowIdx <- upperIdx[myRow]
+          colIdx <- upperIdx[myCol]
+          if (myRow != myCol) {
+            Sigma_y[myRow,myCol] <- sigma[rowIdx] * sigma[colIdx] * cor(allTsTrain[,rowIdx],allTsTrain[,colIdx])
+            Sigma_y[myCol,myRow] <- Sigma_y[myRow,myCol] 
+          }
+        }
+      }
+    }
+    
     
     #==updating
     #A explains how to combin the bottom series in order to obtain the
     # upper series
     A <- t(S[upperIdx,])
     
+    M <- ncol ( t(A) %*% priorCov %*% A + Sigma_y )
     correl <- priorCov %*% A %*%
-      solve (t(A) %*% priorCov %*% A + Sigma_y)
+      solve (t(A) %*% priorCov %*% A + Sigma_y + 1e-6*diag(M))
     
     postMean <- priorMean + correl  %*%
       (Y_vec - t(A) %*% priorMean)
@@ -156,6 +183,9 @@ hier <- function (dset, h=1, fmethod="ets"){
     #save to file the results, at every iteration
     dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, mseBase,mseCombMint,mseBayes)
     filename <- paste("results/mseHierReconc",dset,".csv",sep="")
+    if (correlation){
+      filename <- paste("results/mseHierReconcCorr",dset,".csv",sep="")
+    }
     writeNames <- TRUE
     if(file.exists(filename)){
       writeNames <- FALSE
