@@ -96,11 +96,12 @@ hier <- function (dset, h=1, fmethod="ets", correlation="FALSE"){
     alpha <- 0.2
     sigma <- vector(length = numTs)
     preds <- vector(length = numTs)
-    
+    #the fitted values for the model fitted on each time series
+    fittedValues <- matrix(nrow=dim(allTsTrain)[1], ncol = numTs)
     # modelList <-list()
-    #initialize the list to contains a number of models
+    #initialize the list to contains the correct number of models
     # modelList[[1]] <- ets(allTsTrain[,1])
-    # modelList[[numTs]] <- ets(allTsTrain[,1])
+    # modelList[[numTs]] <- modelList[[1]]
     
     
     #compute, for each  ts, predictions and sigma (h-steps ahead) 
@@ -108,6 +109,7 @@ hier <- function (dset, h=1, fmethod="ets", correlation="FALSE"){
       if (fmethod=="ets"){
         model <- ets(allTsTrain[,i])
         tmp <- forecast(model, h=h, level=1-alpha)
+        fittedValues[,i] <- model$fitted
         # print(paste(as.character(i),"/",as.character(numTs)))
         # print(model$components)
       }
@@ -139,16 +141,27 @@ hier <- function (dset, h=1, fmethod="ets", correlation="FALSE"){
     #prior covariance for the bottom time series
     bottomVar <- sigma[bottomIdx]^2
     priorCov <- diag(bottomVar)
+    if (correlation){
+      #the covariances are the covariances of the time series
+      #the variances are the variances of the forecasts, hence the variances of the residuals
+      #old version: covariance of the time series
+      # priorCov <- cov(allTsTrain)[bottomIdx,bottomIdx]
+      #current version: covariance of the forecasts
+      priorCov <- cov(fittedValues)[bottomIdx,bottomIdx]
+      diag(priorCov) <- bottomVar
+    }
+    
     
     
     #covariance for the upper time series
     upperVar <- sigma[upperIdx]^2
     Sigma_y <- diag(upperVar)
-    
-    #this runs with full covariance matrix, with the covariances estimated
-    #on the time series
     if (correlation){
-      tsCov <- Cov(allTsTrain)
+      #the covariances are the covariances of the time series
+      #the variances are the variances of the forecasts, hence the variances of the residuals
+      # Sigma_y <- cov(allTsTrain)[upperIdx,upperIdx]
+      Sigma_y <- cov(fittedValues)[upperIdx,upperIdx]
+      diag(Sigma_y) <- upperVar
     }
     
     
