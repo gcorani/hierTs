@@ -1,4 +1,4 @@
-hierRec <- function (dset, h=1, fmethod="ets", correlation="FALSE"){
+hierRec <- function (dset, h=1, fmethod="ets"){
   #given the hierTs data set ("tourism","infantgts"), reconciles the h-steps ahead forecast 
   #fmethod can be "ets" or "arima"
   #if correlation is false, the covariance matrix is diagonal
@@ -9,6 +9,59 @@ hierRec <- function (dset, h=1, fmethod="ets", correlation="FALSE"){
   
   if (is.character(dset) == FALSE) {
     stop ("dset should be a string")
+  }
+  
+  bayesRecon <- function (correlation){
+    S <- smatrix(train)
+    bottomIdx <- seq( nrow(S) - ncol(S) +1, nrow(S))
+    upperIdx <- setdiff(1:nrow(S),bottomIdx)
+
+    #prior mean and covariance of the bottom time series
+    priorMean <- preds[bottomIdx]
+    Y_vec <- preds[upperIdx]
+    Sigma_y <- matrix(nrow = length(upperIdx), ncol = length(upperIdx))
+    
+    #prior covariance for the bottom time series
+    bottomVar <- sigma[bottomIdx]^2
+    priorCov <- diag(bottomVar)
+    if (correlation){
+      #the covariances are the covariances of the time series
+      #the variances are the variances of the forecasts, hence the variances of the residuals
+      bottomResiduals <- residuals[,bottomIdx]
+      priorCov <- cov(bottomResiduals)
+      out.glasso <- huge(bottomResiduals, method = "glasso", cov.output = TRUE)
+      out.select <- huge.select(out.glasso, criterion = "stars")
+      priorCov <- out.select$opt.cov
+    }
+    
+    
+    
+    #covariance for the upper time series
+    upperVar <- sigma[upperIdx]^2
+    Sigma_y <- diag(upperVar)
+    if (correlation){
+      #get variance and covariance of the residuals
+      upperResiduals <- residuals[,upperIdx]
+      Sigma_y <- cov(upperResiduals)
+      out.glasso <- huge(upperResiduals, method = "glasso", cov.output = TRUE)
+      out.select <- huge.select(out.glasso, criterion = "stars")
+      Sigma_y <- out.select$opt.cov
+    }
+    
+    
+    #==updating
+    #A explains how to combin the bottom series in order to obtain the
+    # upper series
+    A <- t(S[upperIdx,])
+    
+    M <- ncol ( t(A) %*% priorCov %*% A + Sigma_y )
+    correl <- priorCov %*% A %*%
+      solve (t(A) %*% priorCov %*% A + Sigma_y + 1e-6*diag(M))
+    
+    postMean <- priorMean + correl  %*%
+      (Y_vec - t(A) %*% priorMean)
+    bayesPreds <- buReconcile(postMean, S, predsAllTs = FALSE)
+    return(bayesPreds)
   }
   
   
@@ -68,7 +121,7 @@ hierRec <- function (dset, h=1, fmethod="ets", correlation="FALSE"){
   }
   
   
-  testSize <- 45
+  testSize <- 5
 
   
   
@@ -125,68 +178,13 @@ hierRec <- function (dset, h=1, fmethod="ets", correlation="FALSE"){
     
     calibration50 <- checkCalibration(preds, sigma, test, coverage = 0.5)
     calibration80 <- checkCalibration(preds, sigma, test, coverage = 0.8)
-    
-    
-    
-    S <- smatrix(train)
-    #Bayesian reconciliation
-    bottomIdx <- seq( nrow(S) - ncol(S) +1, nrow(S))
-    upperIdx <- setdiff(1:nrow(S),bottomIdx)
-    #prior mean and covariance of the bottom time series
-    priorMean <- preds[bottomIdx]
-    #prior mean and covariance of the upper time series
-    Y_vec <- preds[upperIdx]
-    Sigma_y <- matrix(nrow = length(upperIdx), ncol = length(upperIdx))
-    
-    #prior covariance for the bottom time series
-    bottomVar <- sigma[bottomIdx]^2
-    priorCov <- diag(bottomVar)
-    if (correlation){
-      #the covariances are the covariances of the time series
-      #the variances are the variances of the forecasts, hence the variances of the residuals
-      bottomResiduals <- residuals[,bottomIdx]
-      priorCov <- cov(bottomResiduals)
-      out.glasso <- huge(bottomResiduals, method = "glasso", cov.output = TRUE)
-      out.select <- huge.select(out.glasso, criterion = "stars")
-      priorCov <- out.select$opt.cov
-    }
-    
-    
-    
-    #covariance for the upper time series
-    upperVar <- sigma[upperIdx]^2
-    Sigma_y <- diag(upperVar)
-    if (correlation){
-      #get variance and covariance of the residuals
-      upperResiduals <- residuals[,upperIdx]
-      Sigma_y <- cov(upperResiduals)
-      out.glasso <- huge(upperResiduals, method = "glasso", cov.output = TRUE)
-      out.select <- huge.select(out.glasso, criterion = "stars")
-      Sigma_y <- out.select$opt.cov
-    }
-    
-    
-    #==updating
-    #A explains how to combin the bottom series in order to obtain the
-    # upper series
-    A <- t(S[upperIdx,])
-    
-    M <- ncol ( t(A) %*% priorCov %*% A + Sigma_y )
-    correl <- priorCov %*% A %*%
-      solve (t(A) %*% priorCov %*% A + Sigma_y + 1e-6*diag(M))
-    
-    postMean <- priorMean + correl  %*%
-      (Y_vec - t(A) %*% priorMean)
-    bayesPreds <- buReconcile(postMean, S, predsAllTs = FALSE)
-    mseBayes =  mean  ( (allts(test)[h,] - bayesPreds)^2 )
-    
+  
+    mseBayes =  mean  ( (allts(test)[h,] - bayesRecon(correlation=FALSE))^2 )
+    mseBayesCorr =  mean  ( (allts(test)[h,] - bayesRecon(correlation=TRUE))^2 )
     
     #save to file the results, at every iteration
-    dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, mseBase,mseCombMint,mseBayes)
+    dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, mseBase,mseCombMint,mseBayes,mseBayesCorr)
     filename <- paste("results/mseHierReconc",dset,".csv",sep="")
-    if (correlation){
-      filename <- paste("results/mseHierReconcCorr",dset,".csv",sep="")
-    }
     writeNames <- TRUE
     if(file.exists(filename)){
       writeNames <- FALSE
