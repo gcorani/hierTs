@@ -1,4 +1,4 @@
-thier <- function (tsObj, fmethod="ets", periodType="monthly"){
+temporalRec <- function (tsObj, fmethod="ets", periodType="monthly"){
   #given a time series, creates all the possible higher-level aggregations 
   # and then computes the reconciled forecasts
   #fmethod can be "ets" or "arima"

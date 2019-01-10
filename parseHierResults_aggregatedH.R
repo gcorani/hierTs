@@ -33,7 +33,7 @@ parseHierResults_aggregatedH <- function (dset){
         favorableProps$propBeatBase[counter] <- mean (subresults$mseBase>subresults$mseBayes)
         favorableProps$propBeatMint[counter] <- mean (subresults$mseCombMint>subresults$mseBayes)
         favorableProps$medianBaseBayes[counter] <- median(subresults$mseBase / subresults$mseBayes)
-        favorableProps$medianBaseMint[counter] <- median(subresults$mseCombMint / subresults$mseBayes)
+        favorableProps$medianMintBayes[counter] <- median(subresults$mseCombMint / subresults$mseBayes)
         
         #generate the bplot with ggplot2
         library(ggplot2)

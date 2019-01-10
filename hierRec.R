@@ -1,9 +1,10 @@
-hier <- function (dset, h=1, fmethod="ets", correlation="FALSE"){
+hierRec <- function (dset, h=1, fmethod="ets", correlation="FALSE"){
   #given the hierTs data set ("tourism","infantgts"), reconciles the h-steps ahead forecast 
   #fmethod can be "ets" or "arima"
   #if correlation is false, the covariance matrix is diagonal
   
   library(hts)
+  library(huge)
   source("loadTourism.R")
   
   if (is.character(dset) == FALSE) {
@@ -68,6 +69,8 @@ hier <- function (dset, h=1, fmethod="ets", correlation="FALSE"){
   
   
   testSize <- 45
+
+  
   
   #if h=1, the possible preds are the whole test size lenght; 
   #if h=2, the possible preds are the (test size lenght -1); etc.
@@ -96,25 +99,24 @@ hier <- function (dset, h=1, fmethod="ets", correlation="FALSE"){
     alpha <- 0.2
     sigma <- vector(length = numTs)
     preds <- vector(length = numTs)
-    
+    #the residuals for the model fitted on each time series
+    residuals <- matrix(nrow=dim(allTsTrain)[1], ncol = numTs)
     # modelList <-list()
-    #initialize the list to contains a number of models
+    #initialize the list to contains the correct number of models
     # modelList[[1]] <- ets(allTsTrain[,1])
-    # modelList[[numTs]] <- ets(allTsTrain[,1])
+    # modelList[[numTs]] <- modelList[[1]]
     
     
     #compute, for each  ts, predictions and sigma (h-steps ahead) 
     for (i in 1:numTs){
       if (fmethod=="ets"){
-        model <- ets(allTsTrain[,i])
-        tmp <- forecast(model, h=h, level=1-alpha)
-        # print(paste(as.character(i),"/",as.character(numTs)))
-        # print(model$components)
+        model <- ets(allTsTrain[,i], additive.only = TRUE)
       }
       else if (fmethod=="arima"){
         model <- auto.arima(allTsTrain[,i])
-        tmp <- forecast(model, h=h, level=1-alpha)
       }
+      tmp <- forecast(model, h=h, level=1-alpha)
+      residuals[,i] <- model$x - model$fitted #we cannot store model$residuals due to models with multiplicative errors
       preds[i] <- tmp$mean[h]
       sigma[i] <- abs ( (tmp$mean[h] - tmp$upper[h])  / (qnorm(alpha / 2)) )
     }
@@ -139,16 +141,28 @@ hier <- function (dset, h=1, fmethod="ets", correlation="FALSE"){
     #prior covariance for the bottom time series
     bottomVar <- sigma[bottomIdx]^2
     priorCov <- diag(bottomVar)
+    if (correlation){
+      #the covariances are the covariances of the time series
+      #the variances are the variances of the forecasts, hence the variances of the residuals
+      bottomResiduals <- residuals[,bottomIdx]
+      priorCov <- cov(bottomResiduals)
+      out.glasso <- huge(bottomResiduals, method = "glasso", cov.output = TRUE)
+      out.select <- huge.select(out.glasso, criterion = "stars")
+      priorCov <- out.select$opt.cov
+    }
+    
     
     
     #covariance for the upper time series
     upperVar <- sigma[upperIdx]^2
     Sigma_y <- diag(upperVar)
-    
-    #this runs with full covariance matrix, with the covariances estimated
-    #on the time series
     if (correlation){
-      tsCov <- Cov(allTsTrain)
+      #get variance and covariance of the residuals
+      upperResiduals <- residuals[,upperIdx]
+      Sigma_y <- cov(upperResiduals)
+      out.glasso <- huge(upperResiduals, method = "glasso", cov.output = TRUE)
+      out.select <- huge.select(out.glasso, criterion = "stars")
+      Sigma_y <- out.select$opt.cov
     }
     
     
