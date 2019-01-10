@@ -121,7 +121,7 @@ hierRec <- function (dset, h=1, fmethod="ets"){
   }
   
   
-  testSize <- 5
+  testSize <- 2
 
   
   
