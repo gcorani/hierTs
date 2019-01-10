@@ -1,7 +1,7 @@
-hierRec <- function (dset, h=1, fmethod="ets"){
-  #given the hierTs data set ("tourism","infantgts"), reconciles the h-steps ahead forecast 
+hierRec <- function (dset, h=1, fmethod="ets", iTest){
+  #The hierTs data set ("tourism","infantgts"), reconciles the h-steps ahead forecast 
   #fmethod can be "ets" or "arima"
-  #if correlation is false, the covariance matrix is diagonal
+  #iTest allows to perform many experiments with rolling origin (iTest is comprised between 1 and 50) 
   
   library(hts)
   library(huge)
@@ -15,7 +15,7 @@ hierRec <- function (dset, h=1, fmethod="ets"){
     S <- smatrix(train)
     bottomIdx <- seq( nrow(S) - ncol(S) +1, nrow(S))
     upperIdx <- setdiff(1:nrow(S),bottomIdx)
-
+    
     #prior mean and covariance of the bottom time series
     priorMean <- preds[bottomIdx]
     Y_vec <- preds[upperIdx]
@@ -121,75 +121,64 @@ hierRec <- function (dset, h=1, fmethod="ets"){
   }
   
   
-  testSize <- 2
-
+  testSize <- 50
   
   
   #if h=1, the possible preds are the whole test size lenght; 
   #if h=2, the possible preds are the (test size lenght -1); etc.
   possiblePreds <- testSize - h + 1
   
-  for (iTest in 1:possiblePreds) {
-    timeIdx             <- time(hierTs$bts[,1])
-    endTrain            <- length(timeIdx) - h - (iTest - 1)
-    train               <- window(hierTs, start = timeIdx[1], end = timeIdx[endTrain] )
-    test                <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
-    
-    #we focus on mint only
-    # fcastBu             <- forecast(train, h = h, method = "bu", fmethod = fmethod)
-    # fcastComb           <- forecast(train, h = h, method = "comb", weights="ols", fmethod=fmethod)
-    # fcastCombWls        <- forecast(train, h = h, method = "comb", weights="wls", fmethod=fmethod)
-    fcastCombMint       <- forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod)
-    
-    # mseBu        <- hierMse(fcastBu, test, h )
-    # mseComb      <- hierMse(fcastComb, test, h )
-    # mseCombWls   <- hierMse(fcastCombWls, test, h )
-    mseCombMint  <- hierMse(fcastCombMint, test,  h)
-    
-    #recompute predictions to be easily accessed by the Bayesian method
-    allTsTrain <- allts(train)
-    numTs <- ncol(allTsTrain)
-    alpha <- 0.2
-    sigma <- vector(length = numTs)
-    preds <- vector(length = numTs)
-    #the residuals for the model fitted on each time series
-    residuals <- matrix(nrow=dim(allTsTrain)[1], ncol = numTs)
-    # modelList <-list()
-    #initialize the list to contains the correct number of models
-    # modelList[[1]] <- ets(allTsTrain[,1])
-    # modelList[[numTs]] <- modelList[[1]]
-    
-    
-    #compute, for each  ts, predictions and sigma (h-steps ahead) 
-    for (i in 1:numTs){
-      if (fmethod=="ets"){
-        model <- ets(allTsTrain[,i], additive.only = TRUE)
-      }
-      else if (fmethod=="arima"){
-        model <- auto.arima(allTsTrain[,i])
-      }
-      tmp <- forecast(model, h=h, level=1-alpha)
-      residuals[,i] <- model$x - model$fitted #we cannot store model$residuals due to models with multiplicative errors
-      preds[i] <- tmp$mean[h]
-      sigma[i] <- abs ( (tmp$mean[h] - tmp$upper[h])  / (qnorm(alpha / 2)) )
-    }
-    mseBase =  mean  ( (allts(test)[h,] - preds)^2 )
-    
-    
-    calibration50 <- checkCalibration(preds, sigma, test, coverage = 0.5)
-    calibration80 <- checkCalibration(preds, sigma, test, coverage = 0.8)
-  
-    mseBayes =  mean  ( (allts(test)[h,] - bayesRecon(correlation=FALSE))^2 )
-    mseBayesCorr =  mean  ( (allts(test)[h,] - bayesRecon(correlation=TRUE))^2 )
-    
-    #save to file the results, at every iteration
-    dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, mseBase,mseCombMint,mseBayes,mseBayesCorr)
-    filename <- paste("results/mseHierReconc",dset,".csv",sep="")
-    writeNames <- TRUE
-    if(file.exists(filename)){
-      writeNames <- FALSE
-    }
-    write.table(dataFrame, file=filename, append = TRUE, sep=",", row.names = FALSE, col.names = writeNames)
+  if (iTest>possiblePreds){
+    error("iTest>possiblePreds")
   }
+  
+  #here the experiment starts
+  timeIdx             <- time(hierTs$bts[,1])
+  endTrain            <- length(timeIdx) - h - (iTest - 1)
+  train               <- window(hierTs, start = timeIdx[1], end = timeIdx[endTrain] )
+  test                <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
+  
+  fcastCombMint       <- forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod)
+  mseCombMint  <- hierMse(fcastCombMint, test,  h)
+  
+  #recompute predictions to be  accessed by the Bayesian method
+  allTsTrain <- allts(train)
+  numTs <- ncol(allTsTrain)
+  alpha <- 0.2
+  sigma <- vector(length = numTs)
+  preds <- vector(length = numTs)
+  #the residuals for the model fitted on each time series
+  residuals <- matrix(nrow=dim(allTsTrain)[1], ncol = numTs)
+  
+  #compute, for each  ts, predictions and sigma (h-steps ahead) 
+  for (i in 1:numTs){
+    if (fmethod=="ets"){
+      model <- ets(allTsTrain[,i], additive.only = TRUE)
+    }
+    else if (fmethod=="arima"){
+      model <- auto.arima(allTsTrain[,i])
+    }
+    tmp <- forecast(model, h=h, level=1-alpha)
+    residuals[,i] <- model$x - model$fitted #we cannot store model$residuals due to models with multiplicative errors
+    preds[i] <- tmp$mean[h]
+    sigma[i] <- abs ( (tmp$mean[h] - tmp$upper[h])  / (qnorm(alpha / 2)) )
+  }
+  mseBase =  mean  ( (allts(test)[h,] - preds)^2 )
+  
+  
+  calibration50 <- checkCalibration(preds, sigma, test, coverage = 0.5)
+  calibration80 <- checkCalibration(preds, sigma, test, coverage = 0.8)
+  
+  mseBayes =  mean  ( (allts(test)[h,] - bayesRecon(correlation=FALSE))^2 )
+  mseBayesCorr =  mean  ( (allts(test)[h,] - bayesRecon(correlation=TRUE))^2 )
+  
+  #save to file the results, at every iteration
+  dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, mseBase,mseCombMint,mseBayes,mseBayesCorr)
+  filename <- paste("results/mseHierReconc",dset,".csv",sep="")
+  writeNames <- TRUE
+  if(file.exists(filename)){
+    writeNames <- FALSE
+  }
+  write.table(dataFrame, file=filename, append = TRUE, sep=",", row.names = FALSE, col.names = writeNames)
 }
 
