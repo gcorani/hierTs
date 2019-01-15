@@ -35,7 +35,8 @@ parseM3Results <- function (type="monthly", fmethod="ets"){
     stat_boxplot(geom = "errorbar", width = 0.5) +  #draw the whiskers
     scale_x_discrete(name = "") +
     scale_y_continuous(name = "Log10 (MSE / MSE base) ") 
-  
+  ylim1 = boxplot.stats(log(dataPlot$V1))$stats[c(1, 5)]
+  currentPlot = currentPlot + coord_cartesian(ylim = ylim1*1.1)  + geom_hline(yintercept = 0, color='darkblue')
   print(currentPlot)
   ggsave(pdfname, width = 4, height = 3)
   
