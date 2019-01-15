@@ -8,9 +8,9 @@ temporalRec <- function (tsObj, fmethod="ets", periodType="monthly"){
   library(fpp2)
   library(hts)
   library(thief)
-  source("hier.R")
+  # source("hierRec.R")
   
-  #computes mae for temporal hierarchies
+  # computes mae for temporal hierarchies
   #both actual and forecast are temporal hierarchies
   #it  averages the  different time series having the same frequency
   getHierMae <- function (actual, forecast) {
