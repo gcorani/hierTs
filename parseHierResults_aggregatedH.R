@@ -50,18 +50,33 @@ parseHierResults_aggregatedH <- function (dset){
         pdfname <- paste("results/plot","_",dset,"_",fmethod,".pdf",sep = "")
         denom <- subresults$mseBase 
         resLenght <- length(subresults$mseBase)
-        relMse <- rbind(matrix(subresults$mseCombMint/denom), matrix(subresults$mseBayes/denom), matrix(subresults$mseBayesCorr/denom))
-        label <-  factor(rbind(matrix(rep("Mint",resLenght)),matrix(rep("Bayes",resLenght)),matrix(rep("Bayes (corr)",resLenght))),
-                         levels = c("Mint","Bayes","Bayes (corr)"))
+        #old code, 3 models
+        # relMse <- rbind(matrix(subresults$mseCombMint/denom), matrix(subresults$mseBayes/denom), matrix(subresults$mseBayesCorr/denom))
+        # label <-  factor(rbind(matrix(rep("Mint",resLenght)),matrix(rep("Bayes",resLenght)),matrix(rep("Bayes (corr)",resLenght))),
+                         # levels = c("Mint","Bayes","Bayes (corr)"))
+        #new code, 2 models (minT and Bayes corr)
+        relMse <- rbind(matrix(subresults$mseCombMint/denom), matrix(subresults$mseBayesCorr/denom))
+        label <-  factor(rbind(matrix(rep("Mint",resLenght)),matrix(rep("Bayes (corr)",resLenght))),
+                         levels = c("Mint","Bayes (corr)"))
         
         dataPlot <- as.data.frame(relMse)
         dataPlot$label <- label
         currentPlot <- ggplot(dataPlot, aes(x = label, y = log10(relMse))) + geom_boxplot()  +
           stat_boxplot(geom = "errorbar", width = 0.5) +  #draw the whiskers
           scale_x_discrete(name = "") +
-          scale_y_continuous(name = "Log10 (MSE / MSE base) ")
+          scale_y_continuous(name = "Log10 ( mse / mse(base) ) ")
+        
+        scaling <- 1.8 #to avoid large outliers that make the boxplot unreadable
+        if (dset=="tourism"){
+          scaling<- 1.1  
+        }
+        else if (fmethod=="ets"){
+          scaling<- 3 
+        }
+        
+        
         ylim1 = boxplot.stats(log(dataPlot$V1))$stats[c(1, 5)]
-        currentPlot = currentPlot + coord_cartesian(ylim = ylim1*1.1)  + geom_hline(yintercept = 0, color='darkblue')
+        currentPlot = currentPlot + coord_cartesian(ylim = ylim1*scaling)  + geom_hline(yintercept = 0, color='darkblue')
         print(currentPlot)
         ggsave(pdfname, width = 4, height = 3)
         counter <- counter + 1

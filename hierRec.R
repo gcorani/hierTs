@@ -129,7 +129,7 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest){
   possiblePreds <- testSize - h + 1
   
   if (iTest>possiblePreds){
-    error("iTest>possiblePreds")
+    stop("iTest>possiblePreds")
   }
   
   #here the experiment starts
