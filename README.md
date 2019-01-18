@@ -18,8 +18,8 @@ Example of reconciliation of a monthly temporal hierarchies:
 where tsObj is a list organized as follows:
 ```R
 tsObj$x #training data
-      tsObj$xx #test data
-      tsObj$sn #name
+tsObj$xx #test data
+tsObj$sn #name
 ```   
 The fmethod parameters can be set to either "ets" or "arima".
 The periodType parameters can be set to either "monthly", "quarterly" or "weekly".
