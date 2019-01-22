@@ -34,7 +34,8 @@ Some examples:
 ```
 The raw results are written in the file `results/mseHierReconc[dsetName].csv`.
 
-Moreover 
+
+## Reconciliation of temporal hierarchies
 
 
 Example of reconciliation of a monthly temporal hierarchies:
@@ -51,7 +52,8 @@ tsObj$sn #name
 The fmethod parameters can be set to either "ets" or "arima".
 The periodType parameters can be set to either "monthly", "quarterly" or "weekly".
 
-Experiments on the whole set of monthly time series from the Mcomp package can be performed:
+## Extensive experiments 
+To reconcile  the whole set of monthly time series from the Mcomp package:
 ```R
  batchM3 <- function(type="monthly",fmethod="ets"){
 ```
