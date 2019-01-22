@@ -1,16 +1,16 @@
 # Bayesian reconcialition of grouped time series and temporal hierarchies 
 
 The main functionalities are provided by two functions:
-1. The function hierRec reconciles forecasts for grouped time series.
-2. The function temporalRec reconciles a temporal hierarchy (i.e., forecast for the same time series sampled at different frequencies).
+1. The function `hierRec` reconciles forecasts for grouped time series.
+2. The function `temporalRec` reconciles a temporal hierarchy (i.e., forecast for the same time series sampled at different frequencies).
 
-##Required packages (available from CRAN):
-*forecast (produce base forecasts)
-*hts (reconciliation algorithms)
-*thief (temporal hierarchies)
-*huge (glasso estimation of the covariance matrix)
-*mcomp (time series of the M3 competition)
-*fpp2 (various time series utilities)
+## Required packages (available from CRAN):
+*`forecast` (produce base forecasts)
+*`hts` (reconciliation algorithms)
+*`thief` (temporal hierarchies)
+*`huge` (glasso estimation of the covariance matrix)
+*`mcomp` (time series of the M3 competition)
+*`fpp2` (various time series utilities)
 
 
 Example of reconciliation of the infantgts data set, using ets and arima:
