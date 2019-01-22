@@ -13,11 +13,29 @@ The main functionalities are provided by two functions:
 * `fpp2` (various time series utilities)
 
 
-Example of reconciliation of the infantgts data set, using ets and arima:
+## Example of reconciliation of grouped time series
+Two data sets can be used: `infantgts` (available from `hts`) or `tourism` (raw data available from [https://robjhyndman.com/publications/mint/](https://robjhyndman.com/publications/mint/); the csv file is available in this repository. When  `tourism` is passed as a parameter, the raw data are parsed by a function.)
+
+The base forecasts can be created using either `arima` or `ets`, both available from `forecast`.
+
+Arguments:
+* `dset` : can be either `infantgts` or `tourism`
+* `fmethod` : can be either `arima` or `ets`
+* `h`: forecast horizon. We use between 1 and 4 in the experiments of the paper.
+* `iTest`: control of the split the data between train and test. Each different `iTest` yields a different split between training and test. Useful for parallelizing the experiments. Admissible values are between 1 and 45.
+
+
+Some examples:
 ```R
- hierRec(dset=infantgts, fmethod="ets", h=1)
- hierRec(dset=infantgts, fmethod="arima", h=1)
+ hierRec(dset="infantgts", fmethod="ets", h=1, iTest=1)
+ hierRec(dset="infantgts", fmethod="arima", h=1, iTest=2)
+ hierRec(dset="tourism", fmethod="ets", h=2, iTest=1)
+ hierRec(dset="tourism", fmethod="arima", h=1)
 ```
+The raw results are written in the file `results/mseHierReconc[dsetName].csv`.
+
+Moreover 
+
 
 Example of reconciliation of a monthly temporal hierarchies:
 
