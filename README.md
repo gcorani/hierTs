@@ -55,6 +55,11 @@ The periodType parameters can be set to either "monthly", "quarterly" or "weekly
 ## Extensive experiments 
 To reconcile  the whole set of monthly time series from the Mcomp package:
 ```R
- batchM3 <- function(type="monthly",fmethod="ets"){
+ batchM3(type="monthly",fmethod="ets")
+ batchM3(type="quarterly",fmethod="ets")
+ batchM3(type="quarterly",fmethod="arima")
+ batchM3(type="monthly",fmethod="arima")
 ```
+The raw results are written in the file `results/mseHierReconc[dsetname].csv`.
+
 The Mcomp package has to be installed.
