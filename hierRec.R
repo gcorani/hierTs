@@ -179,6 +179,10 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest){
   if(file.exists(filename)){
     writeNames <- FALSE
   }
+  if(!dir.exists("results/")){
+    dir.create("results")
+  }
+  
   write.table(dataFrame, file=filename, append = TRUE, sep=",", row.names = FALSE, col.names = writeNames)
 }
 

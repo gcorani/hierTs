@@ -8,7 +8,6 @@ temporalRec <- function (tsObj, fmethod="ets", periodType="monthly"){
   library(fpp2)
   library(hts)
   library(thief)
-  # source("hierRec.R")
   
   # computes mae for temporal hierarchies
   #both actual and forecast are temporal hierarchies
@@ -192,6 +191,10 @@ temporalRec <- function (tsObj, fmethod="ets", periodType="monthly"){
   if(file.exists(filename)){
     writeNames <- FALSE
   }
+  if(!dir.exists("results/")){
+    dir.create("results")
+  }
+  
   write.table(dataFrame, file=filename, append = TRUE, sep=",", row.names = FALSE, col.names = writeNames)
 }
 
