@@ -1,4 +1,4 @@
-hierRec <- function (dset, h=1, fmethod="ets", iTest){
+hierRec <- function (dset, h=1, fmethod="ets", iTest=1){
   #The hierTs data set ("tourism","infantgts"), reconciles the h-steps ahead forecast 
   #fmethod can be "ets" or "arima"
   #iTest allows to perform many experiments with rolling origin (iTest is comprised between 1 and 50) 
@@ -179,10 +179,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest){
   if(file.exists(filename)){
     writeNames <- FALSE
   }
-  if(!dir.exists("results/")){
-    dir.create("results")
-  }
-  
   write.table(dataFrame, file=filename, append = TRUE, sep=",", row.names = FALSE, col.names = writeNames)
 }
 
