@@ -84,7 +84,7 @@ artificialTs <- function(n, correl){
     timeSeries[,i] <- simulArma(n, phi[,i],theta[,i],noise[,i])
   }
   #it is debugged that the true parameters are recovered by autorima if we set n to a large value
-  a <- auto.arima(timeSeries[,2])
+  # a <- auto.arima(timeSeries[,2])
 }
 
 
