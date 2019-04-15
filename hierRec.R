@@ -1,11 +1,16 @@
-hierRec <- function (dset, h=1, fmethod="ets", iTest=1){
+hierRec <- function (dset, h=1, fmethod="ets", iTest=1, synth_n=100, synthCorrel=0.5, seed=0,
+                     howManyBottom=2){
   #The hierTs data set ("tourism","infantgts"), reconciles the h-steps ahead forecast 
   #fmethod can be "ets" or "arima"
-  #iTest allows to perform many experiments with rolling origin (iTest is comprised between 1 and 50) 
+  #iTest allows to parallelize many training/test  with different splits (iTest is comprised between 1 and 50 and controls the separation between training and test) 
+  #synth_n and synthCorrel are used only when generating synthetic data (synth_n: number of time points, synthCorrel: correlation between the two bottom time series.)
+  #seed is especially important when you run synthetic experiments, to make sure you get different data in each experimetn
+  #howManyBottom controls how many bottom synthetic time series (supported: 2 or 4)
   
   library(hts)
   library(huge)
   source("loadTourism.R")
+  set.seed(seed)
   
   if (is.character(dset) == FALSE) {
     stop ("dset should be a string")
@@ -19,7 +24,7 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1){
     #prior mean and covariance of the bottom time series
     priorMean <- preds[bottomIdx]
     Y_vec <- preds[upperIdx]
-    Sigma_y <- matrix(nrow = length(upperIdx), ncol = length(upperIdx))
+    
     
     #prior covariance for the bottom time series
     bottomVar <- sigma[bottomIdx]^2
@@ -34,12 +39,18 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1){
       priorCov <- out.select$opt.cov
     }
     
-    
-    
-    #covariance for the upper time series
     upperVar <- sigma[upperIdx]^2
-    Sigma_y <- diag(upperVar)
-    if (correlation){
+    #covariance for the upper time series; we need managing separately the case where only a single time series is present
+    #as diag will try to create a matrix of size upperVar instead.
+    if (length(upperIdx)==1) {
+      Sigma_y <- upperVar
+    }
+    else {
+      Sigma_y <- diag(upperVar)
+    }
+    
+    #if we only one upper time series, there is no covariance matrix to be estimated. 
+    if (correlation & (length(upperIdx)>1) ){
       #get variance and covariance of the residuals
       upperResiduals <- residuals[,upperIdx]
       Sigma_y <- cov(upperResiduals)
@@ -49,10 +60,18 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1){
     }
     
     
+    
     #==updating
     #A explains how to combin the bottom series in order to obtain the
     # upper series
-    A <- t(S[upperIdx,])
+    
+    #if upperIdx contains a single row, R behaves oddily; hence we need to manually manage that case.
+    if (length(upperIdx)==1){
+      A <- cbind(S[upperIdx,])
+    }
+    else {
+      A <- t(S[upperIdx,])
+    }
     
     M <- ncol ( t(A) %*% priorCov %*% A + Sigma_y )
     correl <- priorCov %*% A %*%
@@ -110,14 +129,30 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1){
     return (mse)
   }
   
-  #extract the time from the data set to then split into train / test (test set contains 25 or 5 time points)
-  set.seed(seed = 0)
   
   if (dset=="tourism"){
     hierTs <- loadTourism()
   }
   else if (dset=="infantgts"){
     hierTs <- infantgts
+  }
+  else if (dset=="synthetic"){
+    source("draw_arima.R")
+    synthTs <- artificialTs(n=synth_n, correl = synthCorrel, howMany = howManyBottom)
+    if (howManyBottom==2){
+      colnames(synthTs) <- c("A1","A2")
+    }
+    if (howManyBottom==4){
+      colnames(synthTs) <- c("A1","A2","B1","B2")
+    }
+    y=ts(synthTs, frequency = 1)
+    
+    if (howManyBottom==2){
+      hierTs <- hts(y, bnames = colnames(y))
+    }
+    else if (howManyBottom==4){
+      hierTs <- hts(y, bnames = colnames(y), characters = c(1,1))
+    }
   }
   
   
@@ -173,7 +208,16 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1){
   mseBayesCorr =  mean  ( (allts(test)[h,] - bayesRecon(correlation=TRUE))^2 )
   
   #save to file the results, at every iteration
-  dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, mseBase,mseCombMint,mseBayes,mseBayesCorr)
+  
+  if (dset=="synthetic"){
+    dataFrame <- data.frame(h, fmethod, dset, synth_n, howManyBottom, synthCorrel, calibration50, calibration80, mseBase,mseCombMint,mseBayes,mseBayesCorr)
+  }
+  else
+  {
+    dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, mseBase,mseCombMint,mseBayes,mseBayesCorr)
+  }
+  
+  
   filename <- paste("results/mseHierReconc",dset,".csv",sep="")
   writeNames <- TRUE
   if(file.exists(filename)){

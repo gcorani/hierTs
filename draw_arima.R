@@ -40,10 +40,19 @@ draw_ma <- function (maOrder){
 }
 
 #draw correlated noise for n time steps, return a vector (n x 2)
-drawNoise <- function(n, correl){
+drawNoise <- function(n, correl, howMany){
   library(MASS)
   #generate an excess of noise observations
-  noise <- mvrnorm(n=2*n, mu = c(0,0), Sigma= rbind(c(1,correl),c(correl,1)))
+  #non-generic code, but might be enough for some limited simulation
+  if (howMany==2)
+    noise <- mvrnorm(n=2*n, mu = c(0,0), Sigma= rbind(c(1,correl),c(correl,1)))
+  if (howMany==4)
+    noise <- mvrnorm(n=2*n, mu = c(0,0,0,0), Sigma= rbind(c(1,correl,correl, correl),
+                                                          c(correl,1, correl, correl),
+                                                          c(correl, correl, 1, correl),
+                                                          c(correl, correl, correl, 1)
+    ))
+  
   return (noise)
 }
 
@@ -64,27 +73,34 @@ simulArma <- function(n, phi, theta, noise){
 }
 
 #return the two bottom time series and the sum time series
-artificialTs <- function(n, correl){
+artificialTs <- function(n, correl, howMany){
   #we use arma(2,2) only
   # arOrders <- c(2,2)
   # maOrders <- c(2,2) #(runif(2) > 0.5)  + 1
   #the pars referring to the same  time series are in the same column: different columns refer to different models 
   armaOrder <- 2
-  models <- 2
-  phi <- matrix(nrow = armaOrder, ncol = models)
-  theta <- phi
-  phi[,1] <- draw_ar(armaOrder)
-  phi[,2] <- draw_ar(armaOrder)
-  theta[,1] <- draw_ma(armaOrder)
-  theta[,2] <- draw_ma(armaOrder)
-  noise <- drawNoise(n, correl)
+  if (! ((howMany==2) | (howMany==4))) {
+    stop("only two of four bottom time series are supported")
+  } 
   
-  timeSeries <- matrix(nrow = n, ncol = models)
-  for (i in 1:models){
+  phi <- matrix(nrow = armaOrder, ncol = howMany)
+  theta <- phi
+  
+  for (i in 1:howMany){
+    phi[,i] <- draw_ar(armaOrder)
+    theta[,i] <- draw_ma(armaOrder)
+  }
+  
+  noise <- drawNoise(n, correl, howMany)
+  
+  timeSeries <- matrix(nrow = n, ncol = howMany)
+  for (i in 1:howMany){
     timeSeries[,i] <- simulArma(n, phi[,i],theta[,i],noise[,i])
   }
+  # timeSeries[, i+1 ] <- apply(timeSeries[,1:i], 1, sum) 
   #it is debugged that the true parameters are recovered by autorima if we set n to a large value
   # a <- auto.arima(timeSeries[,2])
+  return (timeSeries)
 }
 
 
