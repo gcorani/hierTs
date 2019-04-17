@@ -17,12 +17,16 @@ parseHierResults_aggregatedH <- function (dset){
                                fmethod=rep(fmethods[1],configs),
                                propBeatBase=rep(-1,configs),
                                propBeatMint=rep(-1,configs),
+                               pValPropBeatMint=rep(-1,configs),
                                medianBaseBayes=rep(-1,configs),
                                medianMintBayes=rep(-1,configs),
+                               pValMedianMintBayes=rep(-1,configs),
                                propCorrBeatBase=rep(-1,configs),
                                propCorrBeatMint=rep(-1,configs),
+                               pValPropCorrBeatMint=rep(-1,configs),
                                medianBaseBayesCorr=rep(-1,configs),
                                medianMintBayesCorr=rep(-1,configs),
+                               pValMedianMintBayesCorr=rep(-1,configs),
                                stringsAsFactors = FALSE
   )
   
@@ -37,14 +41,17 @@ parseHierResults_aggregatedH <- function (dset){
         subresults <- results[idx,]
         favorableProps$propBeatBase[counter] <- mean (subresults$mseBase>subresults$mseBayes)
         favorableProps$propBeatMint[counter] <- mean (subresults$mseCombMint>subresults$mseBayes)
+        favorableProps$pValPropBeatMint[counter] <- binom.test(sum(subresults$mseCombMint>subresults$mseBayes), length(subresults$mseBayes))$p.value
         favorableProps$medianBaseBayes[counter] <- median(subresults$mseBase / subresults$mseBayes)
         favorableProps$medianMintBayes[counter] <- median(subresults$mseCombMint / subresults$mseBayes)
+        favorableProps$pValMedianMintBayes[counter] <- wilcox.test(log(subresults$mseCombMint / subresults$mseBayes))$p.value
         
         favorableProps$propCorrBeatBase[counter] <- mean (subresults$mseBase>subresults$mseBayesCorr)
         favorableProps$propCorrBeatMint[counter] <- mean (subresults$mseCombMint>subresults$mseBayesCorr)
+        favorableProps$pValPropCorrBeatMint[counter] <- binom.test(sum(subresults$mseCombMint>subresults$mseBayesCorr), length(subresults$mseBayesCorr))$p.value
         favorableProps$medianBaseBayesCorr[counter]  <- median(subresults$mseBase / subresults$mseBayesCorr)
         favorableProps$medianMintBayesCorr[counter] <- median(subresults$mseCombMint / subresults$mseBayesCorr)
-        
+        favorableProps$pValMedianMintBayesCorr[counter] <- wilcox.test(log(subresults$mseCombMint / subresults$mseBayesCorr))$p.value
         #generate the bplot with ggplot2
         library(ggplot2)
         pdfname <- paste("results/plot","_",dset,"_",fmethod,".pdf",sep = "")
@@ -56,8 +63,8 @@ parseHierResults_aggregatedH <- function (dset){
                          # levels = c("Mint","Bayes","Bayes (corr)"))
         #new code, 2 models (minT and Bayes corr)
         relMse <- rbind(matrix(subresults$mseCombMint/denom), matrix(subresults$mseBayesCorr/denom))
-        label <-  factor(rbind(matrix(rep("Mint",resLenght)),matrix(rep("Bayes-corr",resLenght))),
-                         levels = c("Mint","Bayes-corr"))
+        label <-  factor(rbind(matrix(rep("MinT",resLenght)),matrix(rep("Bayes-corr",resLenght))),
+                         levels = c("MinT","Bayes-corr"))
         
         dataPlot <- as.data.frame(relMse)
         dataPlot$label <- label

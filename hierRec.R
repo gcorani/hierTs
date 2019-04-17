@@ -206,6 +206,7 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1, synth_n=100, synthCorrel
   
   mseBayes =  mean  ( (allts(test)[h,] - bayesRecon(correlation=FALSE))^2 )
   mseBayesCorr =  mean  ( (allts(test)[h,] - bayesRecon(correlation=TRUE))^2 )
+  print(paste("mseCombMint",mseCombMint,"mseBayesCorr",mseBayesCorr))
   
   #save to file the results, at every iteration
   
