@@ -1,27 +1,37 @@
 # Bayesian reconcialition of grouped time series and temporal hierarchies 
 
-The main functionalities are provided by two functions:
-1. The function `hierRec` reconciles forecasts for grouped time series.
+This package implements all the functions necessary for Bayesian reconciliation of hierarchical forecasts.
+
+In particular:
+
+1. the function `hierRec` reconciles forecasts for hierachical / grouped time series.
+
 2. The function `temporalRec` reconciles a temporal hierarchy (i.e., forecast for the same time series sampled at different frequencies).
 
-## Required packages (available from CRAN):
-* `forecast` (produce base forecasts)
-* `hts` (reconciliation algorithms)
-* `thief` (temporal hierarchies)
-* `huge` (glasso estimation of the covariance matrix)
+## Required packages for reproducing the paper experiments
+
+* `forecast` (produces base forecasts with either auto.arima or ets)
+* `hts`   (algorithms for reconciling hierarchical time series, including minT)
+* `thief` (algorithms for reconciling temporal hierarchies)
+* `huge`  (glasso estimation of the covariance matrix)
 * `mcomp` (time series of the M3 competition)
-* `fpp2` (various time series utilities)
+* `fpp2`  (various time series utilities)
 
 
-## Example of reconciliation of grouped time series
-Two data sets can be used: `infantgts` (available from `hts`) or `tourism` (raw data available from [https://robjhyndman.com/publications/mint/](https://robjhyndman.com/publications/mint/); the csv file is available in this repository. When  `tourism` is passed as a parameter, the raw data are parsed by a function.)
+## Running reconciliation of grouped time series
+Two data sets can be used: `infantgts` (available from `hts`) or `tourism` (raw data available from [https://robjhyndman.com/publications/mint/](https://robjhyndman.com/publications/mint/); the csv file is available in this repository. When  `tourism` is passed as a parameter, another function of this directory imports the raw data into R.)
 
-The base forecasts can be created using either `arima` or `ets`, both available from `forecast`.
+The base forecasts can be created using either `auto.arima` or `ets`, both available from `forecast`.
 
 Arguments:
+
 * `dset` : can be either `infantgts` or `tourism`
-* `fmethod` : can be either `arima` or `ets`
-* `h`: forecast horizon. We use between 1 and 4 in the experiments of the paper.
+
+* `fmethod` : method for generating the base forecasts: it can be either `arima` or `ets`
+
+* `h`: forecast horizon for which we reconcile the forecasts. We use between 1 and 4 in the experiments of the paper.
+The reconciliation is performed independently for different values of h.
+
 * `iTest`: control of the split the data between train and test. Each different `iTest` yields a different split between training and test. Useful for parallelizing the experiments. Admissible values are between 1 and 45. If unspecified, we resort to the default value iTest=1.
 
 
