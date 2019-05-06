@@ -25,7 +25,7 @@ The base forecasts can be created using either `auto.arima` or `ets`, both avail
 
 Arguments:
 
-* `dset` : can be either `infantgts` or `tourism`
+* `dset` : can be either `infantgts` or `tourism` or `synthetic`
 
 * `fmethod` : method for generating the base forecasts: it can be either `arima` or `ets`. Default: 'ets'.
 
@@ -54,7 +54,6 @@ Examples with real data sets:
  hierRec(dset="tourism", fmethod="arima", h=1) 
 ```
 
-The raw results are written in the file `results/mseHierReconc[dsetName].csv`.
 
 Examples with generated data sets:
 ```R
@@ -62,6 +61,8 @@ Examples with generated data sets:
  hierRec(dset="synthetic", h=3, synth_n=300, synthCorrel=0.8, howManyBottom=4)  
 ```
 
+The reconciliation results  are written in the file `results/mseHierReconc[dsetName].csv`.
+The file shows the mean absolute error (mae) of the base forecasts, minT, and the Bayesian reconciliation (with and without estimating correlation). M
 
 
 ## Reconciliation of temporal hierarchies
