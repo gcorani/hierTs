@@ -1,6 +1,6 @@
 parseTemporalHierResults <- function (type="monthly", fmethod="ets"){
   library(readr)
-  source(bayesianSignedRank.R)
+  source("bayesianSignedRank.R")
   filename <- paste("results/temporalHier","_",type,"_",fmethod,".csv",sep = "")
   results <- read_csv(filename)
   results <- unique(results)
@@ -23,10 +23,11 @@ parseTemporalHierResults <- function (type="monthly", fmethod="ets"){
   favorableProps$medianBaseBayes[counter] <- median(results$mseBase / results$mseBayes)
   favorableProps$medianThiefBayes[counter] <- median(results$mseThief / results$mseBayes)
   favorableProps$pValBayesThief[counter] <- wilcox.test(log(results$mseThief / results$mseBayes))$p.value
-  bayesThief <- bayesianSignedRank(log(subresults$mseThief/subresults$mseBayes),
-                                  rope_min = log(1),
-
-                                    favorableProps$probThiefBeatBayes[counter] <- bayesThief$probSmaller
+  bayesThief <- bayesianSignedRank(log(results$mseThief/results$mseBayes),
+                                  rope_min = log(1),rope_max = log(1))
+  
+  favorableProps$probThiefBeatBayes[counter] <- bayesThief$probSmaller
+  favorableProps$probBayesBeatThief[counter] <- bayesThief$probLarger
   
   #generate the bplot with ggplot2
   library(ggplot2)

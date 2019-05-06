@@ -2,6 +2,7 @@ parseHierResults_aggregatedH <- function (dset){
   #parse the results of hierarchical non-temporal reconciliation
   #readt the mse, extract the proportion of favorable signs and the produces the boxplot
   library(readr)
+  source('bayesianSignedRank.R')
   results <- read_csv(paste("results/mseHierReconc",dset,".csv",sep=""))
   results <- unique(results) #because some experiements on the cluster are duplicated
   fmethods <- unique(results$fmethod)
@@ -20,13 +21,19 @@ parseHierResults_aggregatedH <- function (dset){
                                pValPropBeatMint=rep(-1,configs),
                                medianBaseBayes=rep(-1,configs),
                                medianMintBayes=rep(-1,configs),
-                               pValMedianMintBayes=rep(-1,configs),
+                               pValMedianMintBayesGreater=rep(-1,configs),
+                               pValMedianMintBayesLess=rep(-1,configs),
                                propCorrBeatBase=rep(-1,configs),
                                propCorrBeatMint=rep(-1,configs),
                                pValPropCorrBeatMint=rep(-1,configs),
                                medianBaseBayesCorr=rep(-1,configs),
                                medianMintBayesCorr=rep(-1,configs),
-                               pValMedianMintBayesCorr=rep(-1,configs),
+                               pValMedianMintBayesCorrGreater=rep(-1,configs),
+                               pValMedianMintBayesCorrLess=rep(-1,configs),
+                               probMintBeatBayes=rep(-1,configs),
+                               probBayesBeatMint=rep(-1,configs),
+                               probMintBeatBayesCorr=rep(-1,configs),
+                               probBayesCorrBeatMint=rep(-1,configs),
                                stringsAsFactors = FALSE
   )
   
@@ -44,23 +51,46 @@ parseHierResults_aggregatedH <- function (dset){
         favorableProps$pValPropBeatMint[counter] <- binom.test(sum(subresults$mseCombMint>subresults$mseBayes), length(subresults$mseBayes))$p.value
         favorableProps$medianBaseBayes[counter] <- median(subresults$mseBase / subresults$mseBayes)
         favorableProps$medianMintBayes[counter] <- median(subresults$mseCombMint / subresults$mseBayes)
-        favorableProps$pValMedianMintBayes[counter] <- wilcox.test(log(subresults$mseCombMint / subresults$mseBayes))$p.value
-        
+        favorableProps$pValMedianMintBayesGreater[counter] <- wilcox.test(log(subresults$mseCombMint / subresults$mseBayes), 
+                                                                              alternative="greater")$p.value
+        favorableProps$pValMedianMintBayesLess[counter] <- wilcox.test(log(subresults$mseCombMint / subresults$mseBayes), 
+                                                                           alternative="less")$p.value
         favorableProps$propCorrBeatBase[counter] <- mean (subresults$mseBase>subresults$mseBayesCorr)
         favorableProps$propCorrBeatMint[counter] <- mean (subresults$mseCombMint>subresults$mseBayesCorr)
         favorableProps$pValPropCorrBeatMint[counter] <- binom.test(sum(subresults$mseCombMint>subresults$mseBayesCorr), length(subresults$mseBayesCorr))$p.value
         favorableProps$medianBaseBayesCorr[counter]  <- median(subresults$mseBase / subresults$mseBayesCorr)
         favorableProps$medianMintBayesCorr[counter] <- median(subresults$mseCombMint / subresults$mseBayesCorr)
-        favorableProps$pValMedianMintBayesCorr[counter] <- wilcox.test(log(subresults$mseCombMint / subresults$mseBayesCorr))$p.value
+        favorableProps$pValMedianMintBayesCorrGreater[counter] <- wilcox.test(log(subresults$mseCombMint / subresults$mseBayesCorr),
+                                                                              alternative="greater")$p.value
+        favorableProps$pValMedianMintBayesCorrLess[counter] <- wilcox.test(log(subresults$mseCombMint / subresults$mseBayesCorr),
+                                                                           alternative="less")$p.value
+        bayesMint <- bayesianSignedRank(log(subresults$mseCombMint/subresults$mseBayes),
+                                        rope_min = log(1),
+                                        rope_max = log(1))
+        favorableProps$probBayesBeatMint[counter] <- bayesMint$probLarger
+        favorableProps$probMintBeatBayes[counter] <- bayesMint$probSmaller
+        favorableProps$probMintTieBayes[counter] <-  bayesMint$probRope
+        
+        #we run without rope
+        bayesMintCorr <- bayesianSignedRank(log(subresults$mseCombMint/subresults$mseBayesCorr),
+                                            rope_min = log(1),
+                                            rope_max = log(1))
+        favorableProps$probBayesCorrBeatMint[counter] <- bayesMintCorr$probLarger
+        favorableProps$probMintBeatBayesCorr[counter] <- bayesMintCorr$probSmaller
+        
+        
         #generate the bplot with ggplot2
         library(ggplot2)
         pdfname <- paste("results/plot","_",dset,"_",fmethod,".pdf",sep = "")
         denom <- subresults$mseBase 
         resLenght <- length(subresults$mseBase)
+        
+        
+        
         #old code, 3 models
         # relMse <- rbind(matrix(subresults$mseCombMint/denom), matrix(subresults$mseBayes/denom), matrix(subresults$mseBayesCorr/denom))
         # label <-  factor(rbind(matrix(rep("Mint",resLenght)),matrix(rep("Bayes",resLenght)),matrix(rep("Bayes (corr)",resLenght))),
-                         # levels = c("Mint","Bayes","Bayes (corr)"))
+        # levels = c("Mint","Bayes","Bayes (corr)"))
         #new code, 2 models (minT and Bayes corr)
         relMse <- rbind(matrix(subresults$mseCombMint/denom), matrix(subresults$mseBayesCorr/denom))
         label <-  factor(rbind(matrix(rep("MinT",resLenght)),matrix(rep("Bayes-corr",resLenght))),
