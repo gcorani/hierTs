@@ -27,22 +27,41 @@ Arguments:
 
 * `dset` : can be either `infantgts` or `tourism`
 
-* `fmethod` : method for generating the base forecasts: it can be either `arima` or `ets`
+* `fmethod` : method for generating the base forecasts: it can be either `arima` or `ets`. Default: 'ets'.
 
 * `h`: forecast horizon for which we reconcile the forecasts. We use between 1 and 4 in the experiments of the paper.
-The reconciliation is performed independently for different values of h.
+The reconciliation is performed independently for different values of h. Default: 1.
 
-* `iTest`: control of the split the data between train and test. Each different `iTest` yields a different split between training and test. Useful for parallelizing the experiments. Admissible values are between 1 and 45. If unspecified, we resort to the default value iTest=1.
+* `iTest`: control of the split the data between train and test. The train contains the data from the first observation up to the observation in position (length(timeSeries) - h - (iTest - 1)). This is  especially useful for parallelizing the experiments. Admissible values are between 1 and 45. Default: 1.
+
+An additional set of parameters should be specified for running experiments with synthetic time series.
+
+* `seed` : seed (default:0)
+
+* `synthCorrel` : correlation of the noise affecting the bottom time series. Default: 0.5.
+
+* `synth_n` : how many data point each generated time series should contain. Default: 100.
+
+* `howManyBottom` : how many bottom time series in the hierarchy (either 2 or 4).
 
 
-Some examples:
+Examples with real data sets:
+
 ```R
- hierRec(dset="infantgts", fmethod="ets", h=1, iTest=1) #use the first training/test split
- hierRec(dset="infantgts", fmethod="arima", h=1, iTest=2) #use the second training/test split
+ hierRec(dset="infantgts", fmethod="ets", h=1, iTest=1) 
+ hierRec(dset="infantgts", fmethod="arima", h=1, iTest=2) 
  hierRec(dset="tourism", fmethod="ets", h=2, iTest=1)
- hierRec(dset="tourism", fmethod="arima", h=1) #use the first training/test split
+ hierRec(dset="tourism", fmethod="arima", h=1) 
 ```
+
 The raw results are written in the file `results/mseHierReconc[dsetName].csv`.
+
+Examples with generated data sets:
+```R
+ hierRec(dset="synthetic", h=1, synth_n=100, synthCorrel=0.2, howManyBottom=2) 
+ hierRec(dset="synthetic", h=3, synth_n=300, synthCorrel=0.8, howManyBottom=4)  
+```
+
 
 
 ## Reconciliation of temporal hierarchies
