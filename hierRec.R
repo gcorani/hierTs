@@ -1,6 +1,6 @@
-hierRec <- function (dset, h=1, fmethod="ets", iTest=1, synth_n=100, synthCorrel=0.5, seed=0,
-                     howManyBottom=2){
-  #The hierTs data set ("tourism","infantgts"), reconciles the h-steps ahead forecast 
+hierRec <- function (dset, h=1, fmethod="ets", iTest=1, 
+                     seed=0, synth_n=100, synthCorrel=0.5, howManyBottom=2){
+  #The hierTs data set can be ("tourism","infantgts", "synthetic") 
   #fmethod can be "ets" or "arima"
   #iTest allows to parallelize many training/test  with different splits (iTest is comprised between 1 and 50 and controls the separation between training and test) 
   #synth_n and synthCorrel are used only when generating synthetic data (synth_n: number of time points, synthCorrel: correlation between the two bottom time series.)
