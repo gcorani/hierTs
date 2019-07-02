@@ -1,5 +1,5 @@
 hierRec <- function (dset, h=1, fmethod="ets", iTest=1, 
-                     seed=0, synth_n=100, synthCorrel=0.5, howManyBottom=2){
+                     seed=0, synth_n=100, synthCorrel=0.5){
   #The hierTs data set can be ("tourism","infantgts", "synthetic") 
   #fmethod can be "ets" or "arima"
   #iTest allows to parallelize many training/test  with different splits (iTest is comprised between 1 and 50 and controls the separation between training and test) 
@@ -35,7 +35,7 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
       bottomResiduals <- residuals[,bottomIdx]
       priorCov <- cov(bottomResiduals)
       out.glasso <- huge(bottomResiduals, method = "glasso", cov.output = TRUE)
-      out.select <- huge.select(out.glasso, criterion = "stars")
+      out.select <- huge.select(out.glasso, criterion = "ebic")
       priorCov <- out.select$opt.cov
     }
     
@@ -138,21 +138,22 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   }
   else if (dset=="synthetic"){
     source("draw_arima.R")
-    synthTs <- artificialTs(n=synth_n, correl = synthCorrel, howMany = howManyBottom)
-    if (howManyBottom==2){
-      colnames(synthTs) <- c("A1","A2")
-    }
-    if (howManyBottom==4){
-      colnames(synthTs) <- c("A1","A2","B1","B2")
-    }
+    #we generate the training and the test
+    synthTs <- artificialTs(n=synth_n + h, correl = synthCorrel)
+    # if (howManyBottom==2){
+    #   colnames(synthTs) <- c("A1","A2")
+    # }
+    # if (howManyBottom==4){
+    #   colnames(synthTs) <- c("A1","A2","B1","B2")
+    # }
     y=ts(synthTs, frequency = 1)
     
-    if (howManyBottom==2){
-      hierTs <- hts(y, bnames = colnames(y))
-    }
-    else if (howManyBottom==4){
-      hierTs <- hts(y, bnames = colnames(y), characters = c(1,1))
-    }
+    # if (howManyBottom==2){
+    hierTs <- hts(y, bnames = colnames(y))
+    # }
+    # else if (howManyBottom==4){
+      # hierTs <- hts(y, bnames = colnames(y), characters = c(1,1))
+    # }
   }
   
   
@@ -211,7 +212,9 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   #save to file the results, at every iteration
   
   if (dset=="synthetic"){
-    dataFrame <- data.frame(h, fmethod, dset, synth_n, howManyBottom, synthCorrel, calibration50, calibration80, mseBase,mseCombMint,mseBayes,mseBayesCorr)
+    dataFrame <- data.frame(h, fmethod, synth_n, synthCorrel, mseBase,mseCombMint,mseBayes,mseBayesCorr)
+    colnames(dataFrame) <- c("h","fmethod","sampleSize","correlB1_U","mseBase","mseMint","mseBayesDiag","mseBayesCorr")
+    dset <- paste(dset,"_correl",synthCorrel,"_n",synth_n)
   }
   else
   {
