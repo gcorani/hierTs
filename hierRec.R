@@ -1,11 +1,15 @@
 hierRec <- function (dset, h=1, fmethod="ets", iTest=1, 
-                     seed=0, synth_n=100, synthCorrel=0.5){
+                     seed=0, synth_n=100, synthCorrel=0.5)
+  {
   #The hierTs data set can be ("tourism","infantgts", "synthetic") 
   #fmethod can be "ets" or "arima"
   #iTest allows to parallelize many training/test  with different splits (iTest is comprised between 1 and 50 and controls the separation between training and test) 
   #synth_n and synthCorrel are used only when generating synthetic data (synth_n: number of time points, synthCorrel: correlation between the two bottom time series.)
   #seed is especially important when you run synthetic experiments, to make sure you get different data in each experimetn
   #howManyBottom controls how many bottom synthetic time series (supported: 2 or 4)
+  #covariance can be either "sam" of "shr".
+  #"sam" implies that the sample covariance is used both by minT and Bayes
+  #"shr" implies that the shrunken covariance and the glasso are used respectively by minT and Bayes
   
   library(hts)
   library(huge)
@@ -16,7 +20,8 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     stop ("dset should be a string")
   }
   
-  bayesRecon <- function (correlation){
+  #covariance can be "diagonal", "sam" or "glasso"
+  bayesRecon <- function (covariance){
     S <- smatrix(train)
     bottomIdx <- seq( nrow(S) - ncol(S) +1, nrow(S))
     upperIdx <- setdiff(1:nrow(S),bottomIdx)
@@ -28,12 +33,19 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     
     #prior covariance for the bottom time series
     bottomVar <- sigma[bottomIdx]^2
-    priorCov <- diag(bottomVar)
-    if (correlation){
+    if (covariance=="diagonal"){
+      priorCov <- diag(bottomVar)
+    }
+    else if (covariance=="sam"){
       #the covariances are the covariances of the time series
       #the variances are the variances of the forecasts, hence the variances of the residuals
       bottomResiduals <- residuals[,bottomIdx]
       priorCov <- cov(bottomResiduals)
+    }
+    else if (covariance=="glasso"){
+      #the covariances are the covariances of the time series
+      #the variances are the variances of the forecasts, hence the variances of the residuals
+      bottomResiduals <- residuals[,bottomIdx]
       out.glasso <- huge(bottomResiduals, method = "glasso", cov.output = TRUE)
       out.select <- huge.select(out.glasso, criterion = "ebic")
       priorCov <- out.select$opt.cov
@@ -42,24 +54,28 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     upperVar <- sigma[upperIdx]^2
     #covariance for the upper time series; we need managing separately the case where only a single time series is present
     #as diag will try to create a matrix of size upperVar instead.
+    
     if (length(upperIdx)==1) {
       Sigma_y <- upperVar
     }
-    else {
+    
+    else if (covariance=="diagonal"){
       Sigma_y <- diag(upperVar)
     }
-    
     #if we only one upper time series, there is no covariance matrix to be estimated. 
-    if (correlation & (length(upperIdx)>1) ){
+    else if (covariance=="glasso") {
       #get variance and covariance of the residuals
       upperResiduals <- residuals[,upperIdx]
-      Sigma_y <- cov(upperResiduals)
       out.glasso <- huge(upperResiduals, method = "glasso", cov.output = TRUE)
       out.select <- huge.select(out.glasso, criterion = "stars")
       Sigma_y <- out.select$opt.cov
     }
     
-    
+    else if (covariance=="sam") {
+      #get variance and covariance of the residuals
+      upperResiduals <- residuals[,upperIdx]
+      Sigma_y <- cov(upperResiduals)
+    }
     
     #==updating
     #A explains how to combin the bottom series in order to obtain the
@@ -139,7 +155,10 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   else if (dset=="synthetic"){
     source("draw_arima.R")
     #we generate the training and the test
-    synthTs <- artificialTs(n=synth_n + h, correl = synthCorrel)
+    listSynth <- artificialTs(n=synth_n + h, correl = synthCorrel)
+    synthTs <- listSynth$bottomTs
+    corrB2_U <- listSynth$corrB2_U
+    
     # if (howManyBottom==2){
     #   colnames(synthTs) <- c("A1","A2")
     # }
@@ -174,8 +193,21 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   train               <- window(hierTs, start = timeIdx[1], end = timeIdx[endTrain] )
   test                <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
   
-  fcastCombMint       <- forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod)
-  mseCombMint  <- hierMse(fcastCombMint, test,  h)
+  #sometimes the sample matrix is not positive definite and minT crashes
+  #the matrix is computed internally by minT and cannot be controlled from here.
+  mseCombMintSample <- NA
+  try({
+  fcastCombMintSam <- 
+    forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod, 
+             covariance="sam")
+  mseCombMintSample  <- hierMse(fcastCombMintSam, test,  h)
+  })
+  fcastCombMintShr <- 
+    forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod, 
+             covariance="shr")
+  
+  
+  mseCombMintShr  <- hierMse(fcastCombMintShr, test,  h)
   
   #recompute predictions to be  accessed by the Bayesian method
   allTsTrain <- allts(train)
@@ -205,20 +237,28 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   calibration50 <- checkCalibration(preds, sigma, test, coverage = 0.5)
   calibration80 <- checkCalibration(preds, sigma, test, coverage = 0.8)
   
-  mseBayes =  mean  ( (allts(test)[h,] - bayesRecon(correlation=FALSE))^2 )
-  mseBayesCorr =  mean  ( (allts(test)[h,] - bayesRecon(correlation=TRUE))^2 )
-  print(paste("mseCombMint",mseCombMint,"mseBayesCorr",mseBayesCorr))
   
+  mseBayesDiag =  mean  ( (allts(test)[h,] - bayesRecon(covariance="diagonal"))^2 )
+  mseBayesGlasso =  mean  ( (allts(test)[h,] - bayesRecon(covariance="glasso"))^2 )
+  
+  mseBayesSample <- NA
+  try({
+  mseBayesSample =  mean  ( (allts(test)[h,] - bayesRecon(covariance="sam"))^2 )
+  })
   #save to file the results, at every iteration
   
   if (dset=="synthetic"){
-    dataFrame <- data.frame(h, fmethod, synth_n, synthCorrel, mseBase,mseCombMint,mseBayes,mseBayesCorr)
-    colnames(dataFrame) <- c("h","fmethod","sampleSize","correlB1_U","mseBase","mseMint","mseBayesDiag","mseBayesCorr")
-    dset <- paste(dset,"_correl",synthCorrel,"_n",synth_n)
+    dataFrame <- data.frame(h, fmethod, synth_n, synthCorrel, corrB2_U, mseBase,mseCombMintSample,
+                          mseCombMintShr, mseBayesDiag, mseBayesSample, mseBayesGlasso)
+    colnames(dataFrame) <- c("h","fmethod","sampleSize","correlB1_U","correlB2_U",
+                             "mseBase","mseMintSample","mseCombMintShr","mseBayesDiag","mseBayesSample",
+                             "mseBayesGlasso")
+    dset <- paste0(dset,"_correl",synthCorrel,"_n",synth_n)
   }
   else
   {
-    dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, mseBase,mseCombMint,mseBayes,mseBayesCorr)
+    dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, 
+                            mseBase,mseCombMintSample,mseCombMintShr,mseBayesDiag,mseBayesSample,mseBayesGlasso)
   }
   
   
@@ -227,6 +267,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   if(file.exists(filename)){
     writeNames <- FALSE
   }
-  write.table(dataFrame, file=filename, append = TRUE, sep=",", row.names = FALSE, col.names = writeNames)
+  write.table(na.omit(dataFrame), file=filename, append = TRUE, sep=",", row.names = FALSE, col.names = writeNames)
 }
 

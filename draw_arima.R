@@ -13,7 +13,7 @@ drawPhiSigma <- function(correl=0.01){
     sigmaFound  <- !is.na(sigma_e12[1]) & sum(absSmaller_1)>0
     if (sigmaFound) {
       sigma_e12 <- sigma_e12[absSmaller_1]
-      #select the first root in case they are both >1
+      #select the first root in case they are both valid
       if (length(sigma_e12)>1){
         sigma_e12 <- sigma_e12[1]
       }
@@ -161,10 +161,10 @@ artificialTs <- function(n, correl){
   # hierarchy = cbind(bottomTs, rowSums(bottomTs))
   # empiricalCorB1_U = cor(hierarchy)[1,3]
   # empiricalCorB2_U = cor(hierarchy)[2,3]
-  print("actual correlation B1 U")
-  print (expectedCorB1_U)
-  print("actual correlation B2 U")
-  print (expectedCorB2_U)
+  # print("actual correlation B1 U")
+  # print (expectedCorB1_U)
+  # print("actual correlation B2 U")
+  # print (expectedCorB2_U)
   
   
   
