@@ -67,7 +67,7 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
       #get variance and covariance of the residuals
       upperResiduals <- residuals[,upperIdx]
       out.glasso <- huge(upperResiduals, method = "glasso", cov.output = TRUE)
-      out.select <- huge.select(out.glasso, criterion = "ebic")
+      out.select <- huge.select(out.glasso, criterion = "stars")
       Sigma_y <- out.select$opt.cov
     }
     
@@ -153,22 +153,28 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     hierTs <- infantgts
   }
   else if (dset=="synthetic"){
-    source("drawSmallHierarchy.R")
-    #we generate the hierarchy with two bottom time series
-    #training and the test
+    source("draw_arima.R")
+    #we generate the training and the test
     listSynth <- artificialTs(n=synth_n + h, correl = synthCorrel)
     synthTs <- listSynth$bottomTs
     corrB2_U <- listSynth$corrB2_U
+    
+    # if (howManyBottom==2){
+    #   colnames(synthTs) <- c("A1","A2")
+    # }
+    # if (howManyBottom==4){
+    #   colnames(synthTs) <- c("A1","A2","B1","B2")
+    # }
     y=ts(synthTs, frequency = 1)
-    hierTs <- hts(y, bnames = colnames(y), characters=c(1,1))
-  }
-  else if (dset=="syntheticLarge"){
-    source("drawLargeHierarchy.R")
-    #we generate the hierarchy with *four* bottom time series
-    synthTs <- simulFourBottom(n=synth_n)
-    y=ts(synthTs, frequency = 1)
+    
+    # if (howManyBottom==2){
     hierTs <- hts(y, bnames = colnames(y))
+    # }
+    # else if (howManyBottom==4){
+      # hierTs <- hts(y, bnames = colnames(y), characters = c(1,1))
+    # }
   }
+  
   
   testSize <- 50
   
@@ -249,16 +255,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
                              "mseBayesGlasso")
     dset <- paste0(dset,"_correl",synthCorrel,"_n",synth_n)
   }
-  
-  else if (dset=="syntheticLarge"){
-    dataFrame <- data.frame(h, fmethod, synth_n, mseBase,mseCombMintSample,
-                            mseCombMintShr, mseBayesDiag, mseBayesSample, mseBayesGlasso)
-    colnames(dataFrame) <- c("h","fmethod","sampleSize",
-                             "mseBase","mseMintSample","mseCombMintShr","mseBayesDiag","mseBayesSample",
-                             "mseBayesGlasso")
-    dset <- paste0("largeSynthethic_n",synth_n)
-  }
-  
   else
   {
     dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, 
@@ -266,7 +262,7 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   }
   
   
-  filename <- paste("results/",dset,".csv",sep="")
+  filename <- paste("results/mseHierReconc",dset,".csv",sep="")
   writeNames <- TRUE
   if(file.exists(filename)){
     writeNames <- FALSE
