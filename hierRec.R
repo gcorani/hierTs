@@ -256,7 +256,7 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     colnames(dataFrame) <- c("h","fmethod","sampleSize",
                              "mseBase","mseMintSample","mseCombMintShr","mseBayesDiag","mseBayesSample",
                              "mseBayesGlasso")
-    dset <- paste0("largeSynthethic_n",synth_n)
+    dset <- paste0("largeSynthetic_n",synth_n)
   }
   
   else
