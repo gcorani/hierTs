@@ -12,7 +12,8 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   #"shr" implies that the shrunken covariance and the glasso are used respectively by minT and Bayes
   
   library(hts)
-  library(huge)
+  library(huge)#covariance matrix via glasso
+  library(SHIP)#shrinkage of covarianca matrix
   source("loadTourism.R")
   set.seed(seed)
   
@@ -33,28 +34,31 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     
     #prior covariance for the bottom time series
     bottomVar <- sigma[bottomIdx]^2
+    bottomResiduals <- residuals[,bottomIdx]
     if (covariance=="diagonal"){
       priorCov <- diag(bottomVar)
     }
     else if (covariance=="sam"){
       #the covariances are the covariances of the time series
       #the variances are the variances of the forecasts, hence the variances of the residuals
-      bottomResiduals <- residuals[,bottomIdx]
       priorCov <- cov(bottomResiduals)
     }
     else if (covariance=="glasso"){
       #the covariances are the covariances of the time series
       #the variances are the variances of the forecasts, hence the variances of the residuals
-      bottomResiduals <- residuals[,bottomIdx]
       out.glasso <- huge(bottomResiduals, method = "glasso", cov.output = TRUE)
       out.select <- huge.select(out.glasso, criterion = "ebic")
       priorCov <- out.select$opt.cov
+    }
+    else if (covariance=="shr"){
+      sigmaDiag <- diag(bottomVar)
+      priorCov <-  shrink.estim(bottomResiduals, sigmaDiag)[[1]]
     }
     
     upperVar <- sigma[upperIdx]^2
     #covariance for the upper time series; we need managing separately the case where only a single time series is present
     #as diag will try to create a matrix of size upperVar instead.
-    
+    upperResiduals <- residuals[,upperIdx]
     if (length(upperIdx)==1) {
       Sigma_y <- upperVar
     }
@@ -65,18 +69,18 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     #if we only one upper time series, there is no covariance matrix to be estimated. 
     else if (covariance=="glasso") {
       #get variance and covariance of the residuals
-      upperResiduals <- residuals[,upperIdx]
       out.glasso <- huge(upperResiduals, method = "glasso", cov.output = TRUE)
       out.select <- huge.select(out.glasso, criterion = "ebic")
       Sigma_y <- out.select$opt.cov
     }
-    
     else if (covariance=="sam") {
       #get variance and covariance of the residuals
-      upperResiduals <- residuals[,upperIdx]
       Sigma_y <- cov(upperResiduals)
     }
-    
+    else if (covariance=="shr") {
+      sigma_y_diag <- diag(upperVar)
+      Sigma_y <-  shrink.estim(upperResiduals, sigma_y_diag)[[1]]
+    }
     #==updating
     #A explains how to combin the bottom series in order to obtain the
     # upper series
@@ -234,6 +238,7 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   
   mseBayesDiag =  mean  ( (allts(test)[h,] - bayesRecon(covariance="diagonal"))^2 )
   mseBayesGlasso =  mean  ( (allts(test)[h,] - bayesRecon(covariance="glasso"))^2 )
+  mseBayesShr =  mean  ( (allts(test)[h,] - bayesRecon(covariance="shr"))^2 )
   
   mseBayesSample <- NA
   try({
@@ -243,26 +248,26 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   
   if (dset=="synthetic"){
     dataFrame <- data.frame(h, fmethod, synth_n, synthCorrel, corrB2_U, mseBase,mseCombMintSample,
-                          mseCombMintShr, mseBayesDiag, mseBayesSample, mseBayesGlasso)
+                          mseCombMintShr, mseBayesDiag, mseBayesSample, mseBayesGlasso, mseBayesShr)
     colnames(dataFrame) <- c("h","fmethod","sampleSize","correlB1_U","correlB2_U",
                              "mseBase","mseMintSample","mseCombMintShr","mseBayesDiag","mseBayesSample",
-                             "mseBayesGlasso")
+                             "mseBayesGlasso", "mseBayesShr")
     dset <- paste0(dset,"_correl",synthCorrel,"_n",synth_n)
   }
   
   else if (dset=="syntheticLarge"){
     dataFrame <- data.frame(h, fmethod, synth_n, mseBase,mseCombMintSample,
-                            mseCombMintShr, mseBayesDiag, mseBayesSample, mseBayesGlasso)
+                            mseCombMintShr, mseBayesDiag, mseBayesSample, mseBayesGlasso, mseBayesShr)
     colnames(dataFrame) <- c("h","fmethod","sampleSize",
                              "mseBase","mseMintSample","mseCombMintShr","mseBayesDiag","mseBayesSample",
-                             "mseBayesGlasso")
+                             "mseBayesGlasso","mseBayesShr")
     dset <- paste0("largeSynthetic_n",synth_n)
   }
   
   else
   {
     dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, 
-                            mseBase,mseCombMintSample,mseCombMintShr,mseBayesDiag,mseBayesSample,mseBayesGlasso)
+                            mseBase,mseCombMintSample,mseCombMintShr,mseBayesDiag,mseBayesSample,mseBayesGlasso,mseBayesShr)
   }
   
   
