@@ -193,13 +193,13 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   
   #sometimes the sample matrix is not positive definite and minT crashes
   #the matrix is computed internally by minT and cannot be controlled from here.
-  mseCombMintSample <- NA
-  try({
-  fcastCombMintSam <- 
-    forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod, 
-             covariance="sam")
-  mseCombMintSample  <- hierMse(fcastCombMintSam, test,  h)
-  })
+  mseCombMintSample <- 1
+  # try({
+  # fcastCombMintSam <- 
+  #   forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod, 
+  #            covariance="sam")
+  # mseCombMintSample  <- hierMse(fcastCombMintSam, test,  h)
+  # })
   fcastCombMintShr <- 
     forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod, 
              covariance="shr")
