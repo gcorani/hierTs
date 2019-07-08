@@ -1,6 +1,6 @@
 #!/opt/R/bin/Rscript
 args <- commandArgs (TRUE)
-n <- as.integer(args[2])
+n <- as.integer(args[1])
 
 setwd("/homeb/corani/hierTsCode")
 source("/homeb/corani/hierTsCode/hierRec.R")
