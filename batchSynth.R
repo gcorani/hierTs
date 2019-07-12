@@ -39,10 +39,10 @@ dataFrame <- data.frame(
   currentData$fmethod[1],
   currentData$sampleSize[1],
   currentData$correlB1_U[1],
-  median(currentData$mseMintSample/currentData$mseBayesSample),
-  median(currentData$mseCombMintShr/currentData$mseBayesGlasso),
-  median(currentData$mseBayesDiag/currentData$mseBayesGlasso),
-  median(currentData$mseCombMintShr/currentData$mseBase)
+  median(currentData$mseMintSample/currentData$mseBayesSample,  na.rm = TRUE),
+  median(currentData$mseCombMintShr/currentData$mseBayesGlasso,  na.rm = TRUE),
+  median(currentData$mseBayesDiag/currentData$mseBayesGlasso, na.rm = TRUE),
+  median(currentData$mseCombMintShr/currentData$mseBase, na.rm = TRUE)
 )
 
 colnames(dataFrame) <- c("fmethod", "sampleSize", "correlB1_U",  "mintSample/BayesSample",

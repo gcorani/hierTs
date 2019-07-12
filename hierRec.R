@@ -19,7 +19,13 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   
   if (is.character(dset) == FALSE) {
     stop ("dset should be a string")
+  feasibleDset <- c("infantgts", "tourism", "synthetic", "syntheticLarge")
+  if (! (dset %in% feasibleDset)){
+    print("feasible dset are:")
+    print(feasibleDset)
+    stop ("wrong dset supplied" )
   }
+  
   
   #covariance can be "diagonal", "sam" or "glasso"
   bayesRecon <- function (covariance){
@@ -193,14 +199,14 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   
   #sometimes the sample matrix is not positive definite and minT crashes
   #the matrix is computed internally by minT and cannot be controlled from here.
-  mseCombMintSample <- 1
-  # try({
-  # fcastCombMintSam <- 
-  #   forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod, 
-  #            covariance="sam")
-  # mseCombMintSample  <- hierMse(fcastCombMintSam, test,  h)
-  # })
-  fcastCombMintShr <- 
+  mseCombMintSample <- NA
+  try({
+    fcastCombMintSam <-
+      forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod,
+               covariance="sam")
+    mseCombMintSample  <- hierMse(fcastCombMintSam, test,  h)
+  })
+  fcastCombMintShr <-
     forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod, 
              covariance="shr")
   
@@ -242,13 +248,13 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   
   mseBayesSample <- NA
   try({
-  mseBayesSample =  mean  ( (allts(test)[h,] - bayesRecon(covariance="sam"))^2 )
+    mseBayesSample =  mean  ( (allts(test)[h,] - bayesRecon(covariance="sam"))^2 )
   })
   #save to file the results, at every iteration
   
   if (dset=="synthetic"){
     dataFrame <- data.frame(h, fmethod, synth_n, synthCorrel, corrB2_U, mseBase,mseCombMintSample,
-                          mseCombMintShr, mseBayesDiag, mseBayesSample, mseBayesGlasso, mseBayesShr)
+                            mseCombMintShr, mseBayesDiag, mseBayesSample, mseBayesGlasso, mseBayesShr)
     colnames(dataFrame) <- c("h","fmethod","sampleSize","correlB1_U","correlB2_U",
                              "mseBase","mseMintSample","mseCombMintShr","mseBayesDiag","mseBayesSample",
                              "mseBayesGlasso", "mseBayesShr")
@@ -276,6 +282,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   if(file.exists(filename)){
     writeNames <- FALSE
   }
-  write.table(na.omit(dataFrame), file=filename, append = TRUE, sep=",", row.names = FALSE, col.names = writeNames)
+  write.table(dataFrame, file=filename, append = TRUE, sep=",", row.names = FALSE, col.names = writeNames)
 }
 
