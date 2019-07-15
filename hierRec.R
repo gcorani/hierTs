@@ -1,6 +1,6 @@
 hierRec <- function (dset, h=1, fmethod="ets", iTest=1, 
                      seed=0, synth_n=100, synthCorrel=0.5)
-  {
+{
   #The hierTs data set can be ("tourism","infantgts", "synthetic") 
   #fmethod can be "ets" or "arima"
   #iTest allows to parallelize many training/test  with different splits (iTest is comprised between 1 and 50 and controls the separation between training and test) 
@@ -17,8 +17,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   source("loadTourism.R")
   set.seed(seed)
   
-  if (is.character(dset) == FALSE) {
-    stop ("dset should be a string")
   feasibleDset <- c("infantgts", "tourism", "synthetic", "syntheticLarge")
   if (! (dset %in% feasibleDset)){
     print("feasible dset are:")
@@ -277,7 +275,7 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   }
   
   
-  filename <- paste("results/",dset,".csv",sep="")
+  filename <- paste("results/mse_",dset,".csv",sep="")
   writeNames <- TRUE
   if(file.exists(filename)){
     writeNames <- FALSE
