@@ -12,6 +12,7 @@ parseHierResults_aggregatedH <- function (dset){
   #we need first to instantiate the data frame with placeholder values, and then we fill the correct values
   comparison <- data.frame(
     cases = rep(fmethods[1],configs),
+    h = rep(1,configs),
     fmethod=rep(fmethods[1],configs),
     medianBaseMint=rep(-1,configs),
     medianBaseBayesShr=rep(-1,configs),

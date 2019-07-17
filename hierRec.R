@@ -231,7 +231,8 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     tmp <- forecast(model, h=h, level=1-alpha)
     residuals[,i] <- model$x - model$fitted #we cannot store model$residuals due to models with multiplicative errors
     preds[i] <- tmp$mean[h]
-    sigma[i] <- abs ( (tmp$mean[h] - tmp$upper[h])  / (qnorm(alpha / 2)) )
+    #the reconciliation matrix does always refer to h=1
+    sigma[i] <- abs ( (tmp$mean[1] - tmp$upper[1])  / (qnorm(alpha / 2)) )
   }
   mseBase =  mean  ( (allts(test)[h,] - preds)^2 )
   
