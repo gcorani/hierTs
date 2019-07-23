@@ -1,4 +1,4 @@
-parseHierResults_aggregatedH <- function (dset){
+parseHierResults <- function (dset){
   #parse the results of hierarchical non-temporal reconciliation
   #readt the mse, extract the proportion of favorable signs and the produces the boxplot
   library(readr)
