@@ -24,26 +24,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     stop ("wrong dset supplied" )
   }
   
-  #it yields numerically different results from calling shrink.estims
-  shrink.estim.minT <- function(x, tar)
-  {
-    if (is.matrix(x) == TRUE && is.numeric(x) == FALSE)
-      stop("The data matrix must be numeric!", call. = FALSE)
-    p <- ncol(x)
-    n <- nrow(x)
-    covm <- crossprod(x) / n
-    corm <- cov2cor(covm)
-    xs <- scale(x, center = FALSE, scale = sqrt(diag(covm)))
-    v <- (1/(n * (n - 1))) * (crossprod(xs^2) - 1/n * (crossprod(xs))^2)
-    diag(v) <- 0
-    corapn <- cov2cor(tar)
-    d <- (corm - corapn)^2
-    lambda <- sum(v)/sum(d)
-    lambda <- max(min(lambda, 1), 0)
-    shrink.cov <- lambda * tar + (1 - lambda) * covm
-    return(list(shrink.cov, c("The shrinkage intensity lambda is:",
-                              round(lambda, digits = 4))))
-  }
   
   
   
@@ -80,10 +60,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
       sigmaDiag <- diag(bottomVar)
       priorCov <-  shrink.estim(bottomResiduals, sigmaDiag)[[1]]
     }
-    else if (covariance=="shr-minT"){
-      sigmaDiag <- diag(bottomVar)
-      priorCov <-  shrink.estim.minT(bottomResiduals, sigmaDiag)[[1]]
-    }
     
     upperVar <- sigma[upperIdx]^2
     #covariance for the upper time series; we need managing separately the case where only a single time series is present
@@ -110,10 +86,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     else if (covariance=="shr") {
       sigma_y_diag <- diag(upperVar)
       Sigma_y <-  shrink.estim(upperResiduals, sigma_y_diag)[[1]]
-    }
-    else if (covariance=="shr-minT") {
-      sigma_y_diag <- diag(upperVar)
-      Sigma_y <-  shrink.estim.minT(upperResiduals, sigma_y_diag)[[1]]
     }
     #==updating
     #A explains how to combin the bottom series in order to obtain the
@@ -278,7 +250,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   mseBayesDiag =  mean  ( (allts(test)[h,] - bayesRecon(covariance="diagonal"))^2 )
   mseBayesGlasso =  mean  ( (allts(test)[h,] - bayesRecon(covariance="glasso"))^2 )
   mseBayesShr =  mean  ( (allts(test)[h,] - bayesRecon(covariance="shr"))^2 )
-  mseBayesShr.minT =  mean  ( (allts(test)[h,] - bayesRecon(covariance="shr-minT"))^2 )
   
   mseBayesSample <- NA
   try({
@@ -288,26 +259,26 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   
   if (dset=="synthetic"){
     dataFrame <- data.frame(h, fmethod, synth_n, synthCorrel, corrB2_U, mseBase,mseCombMintSample,
-                            mseCombMintShr, mseBayesDiag, mseBayesSample, mseBayesGlasso, mseBayesShr,  mseBayesShr.minT)
+                            mseCombMintShr, mseBayesDiag, mseBayesSample, mseBayesGlasso, mseBayesShr)
     colnames(dataFrame) <- c("h","fmethod","sampleSize","correlB1_U","correlB2_U",
                              "mseBase","mseMintSample","mseCombMintShr","mseBayesDiag","mseBayesSample",
-                             "mseBayesGlasso", "mseBayesShr","mseBayesShr-minT")
+                             "mseBayesGlasso", "mseBayesShr")
     dset <- paste0(dset,"_correl",synthCorrel,"_n",synth_n)
   }
   
   else if (dset=="syntheticLarge"){
     dataFrame <- data.frame(h, fmethod, synth_n, mseBase,mseCombMintSample,
-                            mseCombMintShr, mseBayesDiag, mseBayesSample, mseBayesGlasso, mseBayesShr,  mseBayesShr.minT)
+                            mseCombMintShr, mseBayesDiag, mseBayesSample, mseBayesGlasso, mseBayesShr)
     colnames(dataFrame) <- c("h","fmethod","sampleSize",
                              "mseBase","mseMintSample","mseCombMintShr","mseBayesDiag","mseBayesSample",
-                             "mseBayesGlasso","mseBayesShr","mseBayesShr-minT")
+                             "mseBayesGlasso","mseBayesShr")
     dset <- paste0("largeSynthetic_n",synth_n)
   }
   
   else
   {
     dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, 
-                            mseBase,mseCombMintSample,mseCombMintShr,mseBayesDiag,mseBayesSample,mseBayesGlasso,mseBayesShr,mseBayesShr-minT)
+                            mseBase,mseCombMintSample,mseCombMintShr,mseBayesDiag,mseBayesSample,mseBayesGlasso,mseBayesShr)
   }
   
   
