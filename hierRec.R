@@ -58,7 +58,7 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     }
     else if (covariance=="shr"){
       sigmaDiag <- diag(bottomVar)
-      priorCov <-  shrink.estim(bottomResiduals, sigmaDiag)[[1]]
+      priorCov <-  shrink.estim(bottomResiduals, tar=build.target(bottomResiduals,type="D"))[[1]]
     }
     
     upperVar <- sigma[upperIdx]^2
@@ -85,7 +85,7 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     }
     else if (covariance=="shr") {
       sigma_y_diag <- diag(upperVar)
-      Sigma_y <-  shrink.estim(upperResiduals, sigma_y_diag)[[1]]
+      Sigma_y <-  shrink.estim(upperResiduals, tar=build.target(upperResiduals,type="D"))[[1]]
     }
     #==updating
     #A explains how to combin the bottom series in order to obtain the
