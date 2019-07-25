@@ -7,6 +7,9 @@ parseHierResults <- function (dset){
   results <- unique(results) #because some experiements on the cluster are duplicated
   fmethods <- unique(results$fmethod)
   horizons <- unique(results$h)
+  #we realize that we are only interested in h up to 4
+  horizons <- horizons[horizons<5]
+  
   configs <- length(fmethods) * length(horizons) 
   
   #we need first to instantiate the data frame with placeholder values, and then we fill the correct values
@@ -14,13 +17,13 @@ parseHierResults <- function (dset){
     cases = rep(fmethods[1],configs),
     h = rep(1,configs),
     fmethod=rep(fmethods[1],configs),
-    medianBaseMint=rep(-1,configs),
+    # medianBaseMint=rep(-1,configs),
     medianBaseBayesShr=rep(-1,configs),
-    medianBaseBayesGlasso=rep(-1,configs),
+    # medianBaseBayesGlasso=rep(-1,configs),
     medianMintBayesShr =rep(-1,configs),
-    medianMintBayesGlasso =rep(-1,configs),
-    pValMedianMintBayesShr=rep(-1,configs),
-    pValMedianMintBayesGlasso=rep(-1,configs),
+    # medianMintBayesGlasso =rep(-1,configs),
+    # pValMedianMintBayesShr=rep(-1,configs),
+    # pValMedianMintBayesGlasso=rep(-1,configs),
     stringsAsFactors = FALSE
   )
   
@@ -39,20 +42,20 @@ parseHierResults <- function (dset){
         comparison$cases[counter] <- sum(idx)
         comparison$fmethod[counter] <- fmethod
         comparison$h[counter] <- h
-        comparison$medianBaseMint[counter] <- median(subresults$mseBase / subresults$mseCombMintShr)
-        comparison$medianBaseBayesShr[counter] <- median(subresults$mseBase / subresults$mseBayesShr)
-        comparison$medianBaseBayesGlasso[counter] <- median(subresults$mseBase / subresults$mseBayesGlasso)
-        comparison$medianMintBayesShr[counter] <- median(subresults$mseCombMintShr / subresults$mseBayesShr)
-        comparison$medianMintBayesGlasso[counter] <- median(subresults$mseCombMintShr / subresults$mseBayesGlasso)
-        comparison$pValMedianMintBayesShr[counter] <- wilcox.test(log(subresults$mseCombMintShr/ subresults$mseBayesShr),
-                                                                  alternative="less")$p.value
-        comparison$pValMedianMintBayesGlasso[counter] <- wilcox.test(log(subresults$mseCombMintShr / subresults$mseBayesGlasso), 
-                                                                     alternative="less")$p.value
+        # comparison$medianBaseMint[counter] <- median(subresults$mseBase / subresults$mseCombMintShr)
+        comparison$medianBaseBayesShr[counter] <- round ( median(subresults$mseBase / subresults$mseBayesShr), digits = 2)
+        # comparison$medianBaseBayesGlasso[counter] <- median(subresults$mseBase / subresults$mseBayesGlasso)
+        comparison$medianMintBayesShr[counter] <- round ( median(subresults$mseCombMintShr / subresults$mseBayesShr), digits = 2)
+        # comparison$medianMintBayesGlasso[counter] <- median(subresults$mseCombMintShr / subresults$mseBayesGlasso)
+        # comparison$pValMedianMintBayesShr[counter] <- wilcox.test(log(subresults$mseCombMintShr/ subresults$mseBayesShr),
+                                                                  # alternative="less")$p.value
+        # comparison$pValMedianMintBayesGlasso[counter] <- wilcox.test(log(subresults$mseCombMintShr / subresults$mseBayesGlasso), 
+                                                                     # alternative="less")$p.value
       }
       counter <- counter + 1
     }
     
-    #generate the bplot with ggplot2
+    #generate the bplot with ggplot2  - eventually commented out
     library(ggplot2)
     pdfname <- paste("results/plot","_",dset,"_",fmethod,".pdf",sep = "")
     denom <- subresults$mseBase 
@@ -60,11 +63,6 @@ parseHierResults <- function (dset){
     
     
     
-    #old code, 3 models
-    # relMse <- rbind(matrix(subresults$mseCombMint/denom), matrix(subresults$mseBayes/denom), matrix(subresults$mseBayesCorr/denom))
-    # label <-  factor(rbind(matrix(rep("Mint",resLenght)),matrix(rep("Bayes",resLenght)),matrix(rep("Bayes (corr)",resLenght))),
-    # levels = c("Mint","Bayes","Bayes (corr)"))
-    #new code, 2 models (minT and Bayes corr)
     relMse <- rbind(matrix(subresults$mseCombMintShr/denom), matrix(subresults$mseBayesShr/denom), matrix(subresults$mseBayesGlasso/denom))
     label <-  factor(rbind(matrix(rep("MinT",resLenght)),matrix(rep("Bayes-shr",resLenght)),
                      matrix(rep("Bayes-glasso",resLenght))),
@@ -106,11 +104,11 @@ for (fmethod in fmethods){
       aggrComparison$fmethod[counter] <- fmethod
       aggrComparison$medianBaseMint[counter] <- median(subresults$mseBase / subresults$mseCombMintShr)
       aggrComparison$medianBaseBayesShr[counter] <- median(subresults$mseBase / subresults$mseBayesShr)
-      aggrComparison$medianBaseBayesGlasso[counter] <- median(subresults$mseBase / subresults$mseBayesGlasso)
+      # aggrComparison$medianBaseBayesGlasso[counter] <- median(subresults$mseBase / subresults$mseBayesGlasso)
       aggrComparison$medianMintBayesShr[counter] <- median(subresults$mseCombMintShr / subresults$mseBayesShr)
-      aggrComparison$medianMintBayesGlasso[counter] <- median(subresults$mseCombMintShr / subresults$mseBayesGlasso)
-      aggrComparison$pValMedianMintBayesShr[counter] <- wilcox.test(log(subresults$mseCombMintShr/ subresults$mseBayesShr),alternative="less")$p.value
-      aggrComparison$pValMedianMintBayesGlasso[counter] <- wilcox.test(log(subresults$mseCombMintShr / subresults$mseBayesGlasso),alternative="less")$p.value
+      # aggrComparison$medianMintBayesGlasso[counter] <- median(subresults$mseCombMintShr / subresults$mseBayesGlasso)
+      # aggrComparison$pValMedianMintBayesShr[counter] <- wilcox.test(log(subresults$mseCombMintShr/ subresults$mseBayesShr),alternative="less")$p.value
+      # aggrComparison$pValMedianMintBayesGlasso[counter] <- wilcox.test(log(subresults$mseCombMintShr / subresults$mseBayesGlasso),alternative="less")$p.value
     }
     counter <- counter + 1
   }
