@@ -192,7 +192,9 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   }
   
   #here the experiment starts
-  startTrain          <- time(hierTs$bts[,1])[1]
+  
+  timeIdx <- time(hierTs$bts[,1])
+  startTrain          <- timeIdx[1]
   endTrain            <- length(timeIdx) - h - (iTest - 1)
   
   
@@ -207,18 +209,18 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     endTrain    <- iTest + 23
   }
   
-  train               <- window(hierTs, start = startTrain, end = timeIdx[endTrain] )
+  train               <- window(hierTs, start = timeIdx[startTrain], end = timeIdx[endTrain] )
   test                <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
   
   #sometimes the sample matrix is not positive definite and minT crashes
   #the matrix is computed internally by.libPaths() minT and cannot be controlled from here.
   mseCombMintSample <- NA
-  try({
-    fcastCombMintSam <-
-      forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod,
-               covariance="sam")
-    mseCombMintSample  <- hierMse(fcastCombMintSam, test,  h)
-  })
+  # try({
+  #   fcastCombMintSam <-
+  #     forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod,
+  #              covariance="sam")
+  #   mseCombMintSample  <- hierMse(fcastCombMintSam, test,  h)
+  # })
   fcastCombMintShr <-
     forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod, 
              covariance="shr")
