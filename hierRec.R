@@ -1,5 +1,5 @@
 hierRec <- function (dset, h=1, fmethod="ets", iTest=1, 
-                     seed=0, synth_n=100, synthCorrel=0.5, shortTrain = FALSE)
+                     seed=0, synth_n=100, synthCorrel=0.5)
 {
   #The hierTs data set can be ("tourism","infantgts", "synthetic") 
   #fmethod can be "ets" or "arima"
@@ -196,19 +196,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   timeIdx <- time(hierTs$bts[,1])
   startTrain          <- timeIdx[1]
   endTrain            <- length(timeIdx) - h - (iTest - 1)
-  
-  
-  if (shortTrain){
-    if (!(dset == "tourism")){
-      stop("shortTrain can be only used with tourism")
-    }
-    if (iTest>200){
-      stop("iTest cannot exceed 200")
-    }
-    startTrain  <-  iTest
-    endTrain    <- iTest + 23
-  }
-  
   train               <- window(hierTs, start = timeIdx[startTrain], end = timeIdx[endTrain] )
   test                <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
   
@@ -298,9 +285,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   
   
   filename <- paste("results/mse_",dset,".csv",sep="")
-  if (shortTrain){
-    filename <- paste("results/mseShortTrain_",dset,".csv",sep="")
-  }
   
   writeNames <- TRUE
   if(file.exists(filename)){
