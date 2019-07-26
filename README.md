@@ -6,15 +6,11 @@ In particular:
 
 1. the function `hierRec` reconciles forecasts for hierachical / grouped time series.
 
-2. The function `temporalRec` reconciles a temporal hierarchy (i.e., forecast for the same time series sampled at different frequencies).
 
 ## Required packages for reproducing the paper experiments
 
 * `forecast` (produces base forecasts with either auto.arima or ets)
 * `hts`   (algorithms for reconciling hierarchical time series, including minT)
-* `thief` (algorithms for reconciling temporal hierarchies)
-* `huge`  (glasso estimation of the covariance matrix)
-* `mcomp` (time series of the M3 competition)
 * `fpp2`  (various time series utilities)
 
 
@@ -62,37 +58,8 @@ Examples with generated data sets:
 ```
 
 The reconciliation results  are written in the file `results/mseHierReconc[dsetName].csv`.
-The file shows the mean absolute error (mae) of the base forecasts, minT, and the Bayesian reconciliation (with and without estimating correlation). M
+The file shows the mean absolute error (mae) of the base forecasts, minT, and the Bayesian reconciliation (with and without estimating correlation). 
 
-
-## Reconciliation of temporal hierarchies
-
-
-Example of reconciliation of a monthly temporal hierarchies:
-
-```R
- temporalRec(tsObj, fmethod="ets", periodType="monthly")
-```
-where tsObj is a list organized as follows:
-```R
-tsObj$x #training data
-tsObj$xx #test data
-tsObj$sn #name
-```   
-The fmethod parameters can be set to either "ets" or "arima".
-The periodType parameters can be set to either "monthly", "quarterly" or "weekly".
-
-## Extensive experiments with temporal hierarchies
-To reconcile  the whole set of monthly time series from the Mcomp package:
-```R
- batchM3(type="monthly",fmethod="ets")
- batchM3(type="quarterly",fmethod="ets")
- batchM3(type="quarterly",fmethod="arima")
- batchM3(type="monthly",fmethod="arima")
-```
-The raw results are written in the file `results/mseHierReconc[dsetname].csv`.
-
-The Mcomp package has to be installed.
 
 ## Analyzing the results
 The previous functions save the raw results in a csv file within the `results/` directory (if missing, the directory is created.
