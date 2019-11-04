@@ -21,6 +21,7 @@ parseHierResults <- function (dset){
     medianBaseBayesShr=rep(-1,configs),
     # medianBaseBayesGlasso=rep(-1,configs),
     medianMintBayesShr =rep(-1,configs),
+    medianBaseMint =rep(-1,configs),
     # medianMintBayesGlasso =rep(-1,configs),
     # pValMedianMintBayesShr=rep(-1,configs),
     # pValMedianMintBayesGlasso=rep(-1,configs),
@@ -46,6 +47,7 @@ parseHierResults <- function (dset){
         comparison$medianBaseBayesShr[counter] <- round ( median(subresults$mseBase / subresults$mseBayesShr), digits = 2)
         # comparison$medianBaseBayesGlasso[counter] <- median(subresults$mseBase / subresults$mseBayesGlasso)
         comparison$medianMintBayesShr[counter] <- round ( median(subresults$mseCombMintShr / subresults$mseBayesShr), digits = 2)
+        comparison$medianBaseMint[counter] <- round ( median(subresults$mseBase / subresults$mseCombMintShr), digits = 2)
         # comparison$medianMintBayesGlasso[counter] <- median(subresults$mseCombMintShr / subresults$mseBayesGlasso)
         # comparison$pValMedianMintBayesShr[counter] <- wilcox.test(log(subresults$mseCombMintShr/ subresults$mseBayesShr),
                                                                   # alternative="less")$p.value
@@ -93,26 +95,28 @@ parseHierResults <- function (dset){
 filename=paste("results/summaryEachH_",dset,".csv",sep="")
 write.table(comparison,file=filename,sep=",",row.names = FALSE)
 
-#analysis aggregated over h
-counter <- 1
-for (fmethod in fmethods){
-    aggrComparison$fmethod[counter] <- fmethod
-    idx = results$fmethod==fmethod 
-    if (sum(idx)>0){
-      subresults <- results[idx,]
-      aggrComparison$cases[counter] <- sum(idx)
-      aggrComparison$fmethod[counter] <- fmethod
-      aggrComparison$medianBaseMint[counter] <- median(subresults$mseBase / subresults$mseCombMintShr)
-      aggrComparison$medianBaseBayesShr[counter] <- median(subresults$mseBase / subresults$mseBayesShr)
-      # aggrComparison$medianBaseBayesGlasso[counter] <- median(subresults$mseBase / subresults$mseBayesGlasso)
-      aggrComparison$medianMintBayesShr[counter] <- median(subresults$mseCombMintShr / subresults$mseBayesShr)
-      # aggrComparison$medianMintBayesGlasso[counter] <- median(subresults$mseCombMintShr / subresults$mseBayesGlasso)
-      # aggrComparison$pValMedianMintBayesShr[counter] <- wilcox.test(log(subresults$mseCombMintShr/ subresults$mseBayesShr),alternative="less")$p.value
-      # aggrComparison$pValMedianMintBayesGlasso[counter] <- wilcox.test(log(subresults$mseCombMintShr / subresults$mseBayesGlasso),alternative="less")$p.value
-    }
-    counter <- counter + 1
-  }
 
-filename=paste("results/summary_",dset,".csv",sep="")
-write.table(aggrComparison,file=filename,sep=",",row.names = FALSE)
+#creation of the agrgegated resutls - commented out
+# #analysis aggregated over h
+# counter <- 1
+# for (fmethod in fmethods){
+#     aggrComparison$fmethod[counter] <- fmethod
+#     idx = results$fmethod==fmethod 
+#     if (sum(idx)>0){
+#       subresults <- results[idx,]
+#       aggrComparison$cases[counter] <- sum(idx)
+#       aggrComparison$fmethod[counter] <- fmethod
+#       aggrComparison$medianBaseMint[counter] <- median(subresults$mseBase / subresults$mseCombMintShr)
+#       aggrComparison$medianBaseBayesShr[counter] <- median(subresults$mseBase / subresults$mseBayesShr)
+#       # aggrComparison$medianBaseBayesGlasso[counter] <- median(subresults$mseBase / subresults$mseBayesGlasso)
+#       aggrComparison$medianMintBayesShr[counter] <- median(subresults$mseCombMintShr / subresults$mseBayesShr)
+#       # aggrComparison$medianMintBayesGlasso[counter] <- median(subresults$mseCombMintShr / subresults$mseBayesGlasso)
+#       # aggrComparison$pValMedianMintBayesShr[counter] <- wilcox.test(log(subresults$mseCombMintShr/ subresults$mseBayesShr),alternative="less")$p.value
+#       # aggrComparison$pValMedianMintBayesGlasso[counter] <- wilcox.test(log(subresults$mseCombMintShr / subresults$mseBayesGlasso),alternative="less")$p.value
+#     }
+#     counter <- counter + 1
+#   }
+# 
+# filename=paste("results/summary_",dset,".csv",sep="")
+# write.table(aggrComparison,file=filename,sep=",",row.names = FALSE)
 }

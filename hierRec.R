@@ -196,7 +196,7 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   timeIdx <- time(hierTs$bts[,1])
   startTrain          <- timeIdx[1]
   endTrain            <- length(timeIdx) - h - (iTest - 1)
-  train               <- window(hierTs, start = timeIdx[startTrain], end = timeIdx[endTrain] )
+  train               <- window(hierTs, start = startTrain, end = timeIdx[endTrain] )
   test                <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
   
   #sometimes the sample matrix is not positive definite and minT crashes
