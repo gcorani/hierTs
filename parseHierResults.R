@@ -8,23 +8,19 @@ ggBplot <- function (subresults){
   label <-  factor(rbind(matrix(rep("MinT",resLenght)),matrix(rep("Bayes",resLenght)),
                          matrix(rep("Base",resLenght))),
                    levels = c("MinT","Bayes","Base"))
-  
+  fmethod <- subresults$fmethod
   dataPlot <- as.data.frame(mse)
   dataPlot$label <- label
   currentPlot <- ggplot(dataPlot, aes(x = label, y = mse)) + geom_boxplot()  +
     stat_boxplot(geom = "errorbar", width = 0.5) +  #draw the whiskers
     scale_x_discrete(name = "") +
     scale_y_continuous(name = "Mse") + 
-    ggtitle(paste (dset, "(",fmethod,")"))
+    ggtitle(paste (dset, paste0("(",fmethod,")")))
   
-  scaling <- 1.8 #to avoid large outliers that make the boxplot unreadable
+  scaling <- 1.2 #to avoid large outliers that make the boxplot unreadable
   if (dset=="tourism"){
-    scaling<- 1.1  
+    scaling <- 1.1
   }
-  else if (fmethod=="ets"){
-    scaling<- 3 
-  }
-  
   
   ylim1 = boxplot.stats((dataPlot$V1))$stats[c(1, 5)]
   currentPlot = currentPlot + coord_cartesian(ylim = ylim1*scaling)  #+ geom_hline(yintercept = 0, color='darkblue', linetype="dashed")
@@ -36,7 +32,6 @@ parseHierResults <- function (dset){
   #parse the results of hierarchical non-temporal reconciliation
   #readt the mse, extract the proportion of favorable signs and the produces the boxplot
   library(readr)
-  source('bayesianSignedRank.R')
   results <- read_csv(paste("results/mse_",dset,".csv",sep=""))
   results <- unique(results) #because some experiements on the cluster are duplicated
   fmethods <- unique(results$fmethod)
@@ -97,19 +92,8 @@ write.table(comparison,file=filename,sep=",",row.names = FALSE)
 
 #creation of the aggregated results and related graphs
 # analysis aggregated over h
- counter <- 1
 for (fmethod in fmethods){
-    aggrComparison$fmethod[counter] <- fmethod
     idx = results$fmethod==fmethod
-    # if (sum(idx)>0){
-    #   subresults <- results[idx,]
-    #   aggrComparison$cases[counter] <- sum(idx)
-    #   aggrComparison$fmethod[counter] <- fmethod
-    #   aggrComparison$medianBaseMint[counter] <- median(subresults$mseBase / subresults$mseCombMintShr)
-    #   aggrComparison$medianBaseBayesShr[counter] <- median(subresults$mseBase / subresults$mseBayesShr)
-    #   aggrComparison$medianMintBayesShr[counter] <- median(subresults$mseCombMintShr / subresults$mseBayesShr)
-    # }
-    # counter <- counter + 1
     ggBplot(results[idx,])
   }
  
