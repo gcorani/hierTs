@@ -1,10 +1,8 @@
-# Bayesian reconcialition of grouped time series and temporal hierarchies 
+# Reconciling hierarchical forecasts via Bayes' rule
 
-This package implements all the functions necessary for Bayesian reconciliation of hierarchical forecasts.
+This package implements  the Bayesian reconciliation of hierarchical forecasts.
 
-In particular:
-
-1. the function `hierRec` reconciles forecasts for hierachical / grouped time series.
+In particular the function `hierRec` reconciles forecasts for hierachical / grouped time series.
 
 
 ## Required packages for reproducing the paper experiments
@@ -16,6 +14,7 @@ In particular:
 
 ## Running reconciliation of grouped time series
 Two data sets can be used: `infantgts` (available from `hts`) or `tourism` (raw data available from [https://robjhyndman.com/publications/mint/](https://robjhyndman.com/publications/mint/); the csv file is available in this repository. When  `tourism` is passed as a parameter, another function of this directory imports the raw data into R.)
+Alternatively, the data can be synthetically generated using the `synthetic` flag.
 
 The base forecasts can be created using either `auto.arima` or `ets`, both available from `forecast`.
 
@@ -67,23 +66,17 @@ If for instance you have reconciled the `infantgts` data set multiple times usin
 
 The results can be analyzed via
 ```R
-parseHierResults_aggregatedH ("name of the data set")
+parseHierResults("name of the data set")
 ```
 For instance:
 
 ```R
-parseHierResults_aggregatedH ("infantgts")
-parseHierResults_aggregatedH ("tourism")
+parseHierResults("infantgts")
+parseHierResults("tourism")
 ```
 
-This creates another text file (`summarytourism.csv` or `summaryinfantgts.csv`) containing the mse statistics given in the paper (% of times better than other methods, median mse ratio). Moreover it creates the boxplot of the log (relative mse), saved as pdf files.
+This creates another text file (`summarytourism.csv` or `summaryinfantgts.csv`) containing the mse statistics given in the paper. Moreover it creates the boxplot of the log (relative mse), saved as pdf files.
 
-The same analysis, performed separately for each h can be done as follows:
-
-```R
-parseHierResults_eachH ("infantgts")
-parseHierResults_eachH ("tourism")
-```
 
 
 
