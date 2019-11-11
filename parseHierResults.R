@@ -1,20 +1,20 @@
 #this helping function generates boxplot of the mae
   #generate the bplot with ggplot2
-ggBplot <- function (subresults){
+ggBplot <- function (subresults, dset){
   library(ggplot2)
+  fmethod <- unique(subresults$fmethod)
   pdfname <- paste("results/plot","_",dset,"_",fmethod,".pdf",sep = "")
   resLenght <- length(subresults$mseBase)
   mse <- rbind(matrix(subresults$mseCombMintShr), matrix(subresults$mseBayesShr), matrix(subresults$mseBase))
   label <-  factor(rbind(matrix(rep("MinT",resLenght)),matrix(rep("Bayes",resLenght)),
                          matrix(rep("Base",resLenght))),
                    levels = c("MinT","Bayes","Base"))
-  fmethod <- subresults$fmethod
   dataPlot <- as.data.frame(mse)
   dataPlot$label <- label
-  currentPlot <- ggplot(dataPlot, aes(x = label, y = mse)) + geom_boxplot()  +
+  currentPlot <- ggplot(dataPlot, aes(x = label, y = sqrt(mse))) + geom_boxplot()  +
     stat_boxplot(geom = "errorbar", width = 0.5) +  #draw the whiskers
     scale_x_discrete(name = "") +
-    scale_y_continuous(name = "Mse") + 
+    scale_y_continuous(name = "rmse") + 
     ggtitle(paste (dset, paste0("(",fmethod,")")))
   
   scaling <- 1.2 #to avoid large outliers that make the boxplot unreadable
@@ -22,7 +22,7 @@ ggBplot <- function (subresults){
     scaling <- 1.1
   }
   
-  ylim1 = boxplot.stats((dataPlot$V1))$stats[c(1, 5)]
+  ylim1 = boxplot.stats(sqrt(dataPlot$V1))$stats[c(1, 5)]
   currentPlot = currentPlot + coord_cartesian(ylim = ylim1*scaling)  #+ geom_hline(yintercept = 0, color='darkblue', linetype="dashed")
   print(currentPlot)
   ggsave(pdfname, width = 4, height = 3)
@@ -42,18 +42,17 @@ parseHierResults <- function (dset){
   configs <- length(fmethods) * length(horizons) 
   
   #we need first to instantiate the data frame with placeholder values, and then we fill the correct values
+
   comparison <- data.frame(
     cases = rep(fmethods[1],configs),
     h = rep(1,configs),
     fmethod=rep(fmethods[1],configs),
-    # medianBaseMint=rep(-1,configs),
     medianBaseBayesShr=rep(-1,configs),
-    # medianBaseBayesGlasso=rep(-1,configs),
     medianMintBayesShr =rep(-1,configs),
     medianBaseMint =rep(-1,configs),
-    # medianMintBayesGlasso =rep(-1,configs),
-    # pValMedianMintBayesShr=rep(-1,configs),
-    # pValMedianMintBayesGlasso=rep(-1,configs),
+    rmseMint=rep(-1,configs),
+    rmseBayes=rep(-1,configs),
+    rmseBase=rep(-1,configs),
     stringsAsFactors = FALSE
   )
   
@@ -72,16 +71,12 @@ parseHierResults <- function (dset){
         comparison$cases[counter] <- sum(idx)
         comparison$fmethod[counter] <- fmethod
         comparison$h[counter] <- h
-        # comparison$medianBaseMint[counter] <- median(subresults$mseBase / subresults$mseCombMintShr)
         comparison$medianBaseBayesShr[counter] <- round ( median(subresults$mseBase / subresults$mseBayesShr), digits = 2)
-        # comparison$medianBaseBayesGlasso[counter] <- median(subresults$mseBase / subresults$mseBayesGlasso)
         comparison$medianMintBayesShr[counter] <- round ( median(subresults$mseCombMintShr / subresults$mseBayesShr), digits = 2)
         comparison$medianBaseMint[counter] <- round ( median(subresults$mseBase / subresults$mseCombMintShr), digits = 2)
-        # comparison$medianMintBayesGlasso[counter] <- median(subresults$mseCombMintShr / subresults$mseBayesGlasso)
-        # comparison$pValMedianMintBayesShr[counter] <- wilcox.test(log(subresults$mseCombMintShr/ subresults$mseBayesShr),
-                                                                  # alternative="less")$p.value
-        # comparison$pValMedianMintBayesGlasso[counter] <- wilcox.test(log(subresults$mseCombMintShr / subresults$mseBayesGlasso), 
-                                                                     # alternative="less")$p.value
+        comparison$rmseMint[counter] <- median(sqrt(subresults$mseCombMintShr))
+        comparison$rmseBayes[counter] <- median(sqrt(subresults$mseBayesShr))
+        comparison$rmseBase[counter] <- median(sqrt(subresults$mseBase))    
       }
       counter <- counter + 1
     }
@@ -93,8 +88,8 @@ write.table(comparison,file=filename,sep=",",row.names = FALSE)
 #creation of the aggregated results and related graphs
 # analysis aggregated over h
 for (fmethod in fmethods){
-    idx = results$fmethod==fmethod
-    ggBplot(results[idx,])
+    idx = results$fmethod==fmethod & results$h==1
+    ggBplot(results[idx,],dset)
   }
  
 }

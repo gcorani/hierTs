@@ -1,7 +1,7 @@
 hierRec <- function (dset, h=1, fmethod="ets", iTest=1, 
                      seed=0, synth_n=100, synthCorrel=0.5)
 {
-  #The hierTs data set can be ("tourism","infantgts", "synthetic") 
+  #The hierTs data set can be ("tourism","infantgts", "synthetic","syntheticLarge") 
   #fmethod can be "ets" or "arima"
   #iTest allows to parallelize many training/test  with different splits (iTest is comprised between 1 and 50 and controls the separation between training and test) 
   #synth_n and synthCorrel are used only when generating synthetic data (synth_n: number of time points, synthCorrel: correlation between the two bottom time series.)
@@ -201,13 +201,14 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   
   #sometimes the sample matrix is not positive definite and minT crashes
   #the matrix is computed internally by.libPaths() minT and cannot be controlled from here.
+  # mseCombMintSample <- NA
   mseCombMintSample <- NA
-  # try({
-  #   fcastCombMintSam <-
-  #     forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod,
-  #              covariance="sam")
-  #   mseCombMintSample  <- hierMse(fcastCombMintSam, test,  h)
-  # })
+  try({
+    fcastCombMintSam <-
+      forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod,
+               covariance="sam")
+    mseCombMintSample  <- hierMse(fcastCombMintSam, test,  h)
+  })
   fcastCombMintShr <-
     forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod, 
              covariance="shr")
@@ -250,7 +251,8 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   
   
   mseBayesDiag =  mean  ( (allts(test)[h,] - bayesRecon(covariance="diagonal"))^2 )
-  mseBayesGlasso =  mean  ( (allts(test)[h,] - bayesRecon(covariance="glasso"))^2 )
+  # mseBayesGlasso =  mean  ( (allts(test)[h,] - bayesRecon(covariance="glasso"))^2 )
+  mseBayesGlasso <- -1
   mseBayesShr =  mean  ( (allts(test)[h,] - bayesRecon(covariance="shr"))^2 )
   
   mseBayesSample <- NA
