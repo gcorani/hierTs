@@ -1,3 +1,5 @@
+#this functions draws data for a hierarchy with 2 bottom time series
+
 #draws the autoreg and the noise correlation
 drawPhiSigma <- function(correl=0.01){  
   bottomTs <- 2

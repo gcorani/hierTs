@@ -1,3 +1,4 @@
+
 covarAnalysis <- function (dset, h=1, fmethod="ets", iTest=1, seed=0)
 {
   #The hierTs data set can be ("tourism","infantgts", "synthetic") 

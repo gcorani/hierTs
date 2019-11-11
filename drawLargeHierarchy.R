@@ -1,4 +1,5 @@
-#a simple function to draw synthetic data using for the noise the covariance matrix
+#this functions draws data for a hierarchy with 4 bottom time series,
+#for the noise the covariance matrix
 #of the minT paper, sec 3.2 
 
 

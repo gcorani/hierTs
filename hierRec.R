@@ -1,7 +1,7 @@
 hierRec <- function (dset, h=1, fmethod="ets", iTest=1, 
                      seed=0, synth_n=100, synthCorrel=0.5)
 {
-  #The hierTs data set can be ("tourism","infantgts", "synthetic","syntheticLarge") 
+  #The hierTs data set can be ("tourism","infantgts", "synthetic" (2 bottom time series),"syntheticLarge" (4 bottom time series)) 
   #fmethod can be "ets" or "arima"
   #iTest allows to parallelize many training/test  with different splits (iTest is comprised between 1 and 50 and controls the separation between training and test) 
   #synth_n and synthCorrel are used only when generating synthetic data (synth_n: number of time points, synthCorrel: correlation between the two bottom time series.)
