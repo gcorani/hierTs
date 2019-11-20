@@ -7,8 +7,8 @@ source("/homeb/giorgio.corani/hierTsCode/hierRec.R")
 
 library(readr)
 
-reps <- 5
-#reps <- 2500
+#reps <- 5
+reps <- 2500
 
 for (i in 1:reps){
   hierRec(dset="syntheticLarge", fmethod = "arima", seed=i, synth_n = n)
@@ -28,13 +28,11 @@ dataFrame <- data.frame(
   # median(currentData$mseCombMintShr/currentData$mseBayesGlasso),
   # median(currentData$mseBayesDiag/currentData$mseBayesGlasso),
   median(currentData$mseMintShr/currentData$mseBayesShr),
-  median(currentData$mseBayesShr/currentData$mseBase),
-  median(currentData$mseMintShr/currentData$mseBu),
-  median(currentData$mseBayesShr/currentData$mseBu)
+  median(currentData$mseBayesShr/currentData$mseBase)
 )
 
 colnames(dataFrame) <- c("fmethod", "sampleSize",  "mintSample/BayesSample",
-                         "MintShr/BayesShr", "BayesShr/Base","MinT/Bu","BayesShr/Bu")
+                         "MintShr/BayesShr", "BayesShr/Base")
 
 filename <- "results/summaryLargeSynthetic.csv"
 writeNames <- TRUE

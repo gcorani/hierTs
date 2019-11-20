@@ -6,10 +6,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   #iTest allows to parallelize many training/test  with different splits (iTest is comprised between 1 and 50 and controls the separation between training and test) 
   #synth_n and synthCorrel are used only when generating synthetic data (synth_n: number of time points, synthCorrel: correlation between the two bottom time series.)
   #seed is especially important when you run synthetic experiments, to make sure you get different data in each experimetn
-  #howManyBottom controls how many bottom synthetic time series (supported: 2 or 4)
-  #covariance can be either "sam" of "shr".
-  #"sam" implies that the sample covariance is used both by minT and Bayes
-  #"shr" implies that the shrunken covariance and the glasso are used respectively by minT and Bayes
   
   library(hts)
   library(huge)#covariance matrix via glasso
@@ -201,20 +197,25 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   
   #sometimes the sample matrix is not positive definite and minT crashes
   #the matrix is computed internally by.libPaths() minT and cannot be controlled from here.
-  # mseCombMintSample <- NA
-  mseCombMintSample <- NA
+  # mseMintSample <- NA
+  mseMintSample <- NA
   try({
-    fcastCombMintSam <-
+    fcastMintSam <-
       forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod,
                covariance="sam")
-    mseCombMintSample  <- hierMse(fcastCombMintSam, test,  h)
+    mseMintSample  <- hierMse(fcastMintSam, test,  h)
   })
-  fcastCombMintShr <-
+  fcastMintShr <-
     forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod, 
              covariance="shr")
+  mseMintShr  <- hierMse(fcastMintShr, test,  h)
   
-  
-  mseCombMintShr  <- hierMse(fcastCombMintShr, test,  h)
+  fcastBu <- NA
+  #we run bu only on synthetic data, otherwise becomes too slow
+  if (dset=="syntheticLarge"){
+    fcastBu <- forecast(train, h = h, method = "bu", fmethod=fmethod)
+    mseBu   <- hierMse(fcastBu, test,  h)
+  }
   
   #recompute predictions to be  accessed by the Bayesian method
   allTsTrain <- allts(train)
@@ -244,16 +245,10 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     sigma[i] <- abs ( (tmp$mean[1] - tmp$upper[1])  / (qnorm(alpha / 2)) )
   }
   mseBase =  mean  ( (allts(test)[h,] - preds)^2 )
-  
-  
-  calibration50 <- checkCalibration(preds, sigma, test, coverage = 0.5)
-  calibration80 <- checkCalibration(preds, sigma, test, coverage = 0.8)
-  
-  
-  mseBayesDiag =  mean  ( (allts(test)[h,] - bayesRecon(covariance="diagonal"))^2 )
+  # mseBayesDiag =  mean  ( (allts(test)[h,] - bayesRecon(covariance="diagonal"))^2 )
   # mseBayesGlasso =  mean  ( (allts(test)[h,] - bayesRecon(covariance="glasso"))^2 )
-  mseBayesGlasso <- -1
   mseBayesShr =  mean  ( (allts(test)[h,] - bayesRecon(covariance="shr"))^2 )
+  
   
   mseBayesSample <- NA
   try({
@@ -262,27 +257,26 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   #save to file the results, at every iteration
   
   if (dset=="synthetic"){
-    dataFrame <- data.frame(h, fmethod, synth_n, synthCorrel, corrB2_U, mseBase,mseCombMintSample,
-                            mseCombMintShr, mseBayesDiag, mseBayesSample, mseBayesGlasso, mseBayesShr)
+    dataFrame <- data.frame(h, fmethod, synth_n, synthCorrel, corrB2_U, mseBase,mseMintSample,
+                            mseMintShr, mseBayesDiag, mseBayesSample, mseBayesShr)
     colnames(dataFrame) <- c("h","fmethod","sampleSize","correlB1_U","correlB2_U",
-                             "mseBase","mseMintSample","mseCombMintShr","mseBayesDiag","mseBayesSample",
-                             "mseBayesGlasso", "mseBayesShr")
+                             "mseBase","mseMintSample","mseMintShr","mseBayesDiag","mseBayesSample", "mseBayesShr")
     dset <- paste0(dset,"_correl",synthCorrel,"_n",synth_n)
   }
   
   else if (dset=="syntheticLarge"){
-    dataFrame <- data.frame(h, fmethod, synth_n, mseBase,mseCombMintSample,
-                            mseCombMintShr, mseBayesDiag, mseBayesSample, mseBayesGlasso, mseBayesShr)
+    dataFrame <- data.frame(h, fmethod, synth_n, mseBase,mseMintSample,
+                            mseMintShr, mseBayesSample, mseBayesShr, mseBu)
     colnames(dataFrame) <- c("h","fmethod","sampleSize",
-                             "mseBase","mseMintSample","mseCombMintShr","mseBayesDiag","mseBayesSample",
-                             "mseBayesGlasso","mseBayesShr")
+                             "mseBase","mseMintSample","mseMintShr","mseBayesSample",
+                             "mseBayesShr","mseBu")
     dset <- paste0("largeSynthetic_n",synth_n)
   }
   
   else
   {
     dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, 
-                            mseBase,mseCombMintSample,mseCombMintShr,mseBayesDiag,mseBayesSample,mseBayesGlasso,mseBayesShr)
+                            mseBase,mseMintSample,mseMintShr,mseBayesDiag,mseBayesSample,mseBayesShr)
   }
   
   
