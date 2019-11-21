@@ -56,8 +56,8 @@ figureFcast <- function(seed=0){
   actual <- hierTs$bts[,bottomIdx]
   base   <- ts(base[,3+bottomIdx], start=timeIdx[endTrain +1])
   reconc <- ts(reconcBayes[,3+bottomIdx], start=timeIdx[endTrain +1])
-  p <- autoplot(actual) + autolayer(base)   + autolayer(reconc) # + theme(legend.position = c(.95, .95))
-  
+  p <- forecast::autoplot(actual, size = 0.5) + autolayer(base, size = 1)   + autolayer(reconc, size = 1)
+  p
   #create a 2 by 2 figure
     #the last 4 ts are the useful ones
   # for (idx in (seq(4:8))){
