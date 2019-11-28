@@ -31,11 +31,16 @@ figureFcast <- function(seed=0){
   fitted <- matrix(nrow=dim(allTsTrain)[1], ncol = numTs)
   actual <- matrix(nrow=dim(allTsTrain)[1], ncol = numTs)
   
+  
   #compute, for each  ts, predictions and sigma (h-steps ahead) 
   #we consider 4 steps ahead
-
-  base <- matrix(ncol=numTs, nrow=maxH)
-  reconcBayes <- matrix(ncol=numTs, nrow=maxH)
+  
+  baseAll <- matrix(ncol=numTs, nrow=maxH+1)
+  baseAll[1,] <- tail(allts(train),1)
+  fmintAll <- baseAll
+  bayesAll <- baseAll
+  
+  
   for (h in (seq(1:maxH))){
     for (i in 1:numTs){
       model <- auto.arima(allTsTrain[,i])
@@ -44,24 +49,31 @@ figureFcast <- function(seed=0){
       preds[i] <- tmp$mean[h]
     }
     mseBase =  mean  ( (allts(test)[h,] - preds)^2 )
-    reconcBayes[h,] <- bayesRecon(covariance="shr")
-    mseBayesShr =  mean   (allts(test)[h,] - reconcBayes[h,])^2 
-    base[h,] <- preds
+    bayesAll[2:(h+1),] <- bayesRecon(covariance="shr")
+    mseBayesShr =  mean   (allts(test)[h,] - bayesAll[h,])^2 
+    baseAll[2:(h+1),] <- preds
     actual <- allts(test)
+    fmintAll[2:(h+1),] <-
+      allts(forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod, 
+                     covariance="shr"))[h,]
+    mseMint <-  mean   (allts(test)[h,] - fmintAll[h,])^2 
   }
   
-  
-  bottomIdx <- 1
-
-  actual <- hierTs$bts[,bottomIdx]
-  base   <- ts(base[,3+bottomIdx], start=timeIdx[endTrain +1])
-  reconc <- ts(reconcBayes[,3+bottomIdx], start=timeIdx[endTrain +1])
-  p <- forecast::autoplot(actual, size = 0.5) + autolayer(base, size = 1)   + autolayer(reconc, size = 1)
-  p
+  for (bottomIdx in seq(1:4)){
+    y <- hierTs$bts[,bottomIdx]
+    base  <- ts (baseAll[,3+bottomIdx], start=timeIdx[endTrain])
+    bayes <- ts (bayesAll[,3+bottomIdx], start=timeIdx[endTrain])
+    fmint <- ts (fmintAll[,3+bottomIdx], start=timeIdx[endTrain])
+    filename <- paste0("results/plots/plot_seed",seed,"_bottom",bottomIdx,".pdf")
+    pdf(filename, width = 4, height = 3)
+    p <- autoplot(y, size = 0.75)+ autolayer(base, size = 0.75) + autolayer(bayes, size = 0.75)   + autolayer(fmint, size = 0.5)
+    print(p)
+    dev.off()
+  }
   #create a 2 by 2 figure
-    #the last 4 ts are the useful ones
+  #the last 4 ts are the useful ones
   # for (idx in (seq(4:8))){
   #   autoplot(actual[,idx])
   # }
-  pdf("rplot.pdf")
+  
 }
