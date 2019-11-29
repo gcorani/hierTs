@@ -59,7 +59,7 @@ For the `syntheticLarge` case, the covariance matrix of the noise is set as in t
 
 
 The reconciliation results  are written in the file `results/mseHierReconc[dsetName].csv`.
-The file shows the mean absolute error (mae) of the base forecasts, minT, and the Bayesian reconciliation (with and without estimating correlation). 
+The file shows the mean squared error (mse) of the base forecasts, minT (using shrinkage estimation of covariance), and the Bayesian reconciliation (using the saame shrinkage estimation of covariance). If the data set is synthetic or syntheticLarge, MinT and Bayesian reconciliation are performed using also the sample estimation of the covariance.
 
 
 ## Analyzing the results
