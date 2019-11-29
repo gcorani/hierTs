@@ -20,7 +20,7 @@ The base forecasts can be created using either `auto.arima` or `ets`, both avail
 
 Arguments:
 
-* `dset` : can be either `infantgts` or `tourism` or `synthetic`
+* `dset` : can be either `infantgts`, `tourism`, `synthetic` (2 bottom time series, 1 top) or `syntheticLarge` (4 bottom time series, 2 middle, 1 top)
 
 * `fmethod` : method for generating the base forecasts: it can be either `arima` or `ets`. Default: 'ets'.
 
@@ -33,11 +33,12 @@ An additional set of parameters should be specified for running experiments with
 
 * `seed` : seed (default:0)
 
-* `synthCorrel` : correlation of the noise affecting the bottom time series. Default: 0.5.
+* `synth_n` : applies only to the `synthetic` and `syntheticLarge`  case: length of the generated time series. Default: 100.
 
-* `synth_n` : how many data point each generated time series should contain. Default: 100.
 
-* `howManyBottom` : how many bottom time series in the hierarchy (either 2 or 4).
+* `synthCorrel` : correlation of the noise affecting the bottom time series. Default: 0.5. Applies only to the `synthetic` case
+
+
 
 
 Examples with real data sets:
