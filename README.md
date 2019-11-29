@@ -77,8 +77,7 @@ parseHierResults("infantgts")
 parseHierResults("tourism")
 ```
 
-This creates another text file (`summarytourism.csv` or `summaryinfantgts.csv`) containing the mse statistics given in the paper. Moreover it creates the boxplot of the log (relative mse), saved as pdf files.
-
+This creates another text file (`summarytourism.csv` or `summaryinfantgts.csv`) which summarizes the results.
 
 
 
