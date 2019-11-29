@@ -3,13 +3,12 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
 {
   #The hierTs data set can be ("tourism","infantgts", "synthetic" (2 bottom time series),"syntheticLarge" (4 bottom time series)) 
   #fmethod can be "ets" or "arima"
-  #iTest allows to parallelize many training/test  with different splits (iTest is comprised between 1 and 50 and controls the separation between training and test) 
+  #iTest decised the split between  training/test  (iTest is comprised between 1 and 50 and controls the separation between training and test).
+  #The training set contains the data from the first observation up to the observation in position (length(timeSeries) - h - (iTest - 1)).
   #synth_n and synthCorrel are used only when generating synthetic data (synth_n: number of time points, synthCorrel: correlation between the two bottom time series.)
   #seed is especially important when you run synthetic experiments, to make sure you get different data in each experimetn
   
   library(hts)
-  library(huge)#covariance matrix via glasso
-  library(SHIP)#shrinkage of covarianca matrix
   source("loadTourism.R")
   set.seed(seed)
   
@@ -22,8 +21,9 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   
   
   
-  
-  #covariance can be "diagonal", "sam" or "glasso"
+  #Reconciliation using Bayes' rule
+  #covariance can be "diagonal", "sam" (sample estimate), "shr" (shrinkage) 
+  #in real applications, the shr is recommended
   bayesRecon <- function (covariance){
     S <- smatrix(train)
     bottomIdx <- seq( nrow(S) - ncol(S) +1, nrow(S))
@@ -45,13 +45,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
       #the variances are the variances of the forecasts, hence the variances of the residuals
       priorCov <- cov(bottomResiduals)
     }
-    else if (covariance=="glasso"){
-      #the covariances are the covariances of the time series
-      #the variances are the variances of the forecasts, hence the variances of the residuals
-      out.glasso <- huge(bottomResiduals, method = "glasso", cov.output = TRUE)
-      out.select <- huge.select(out.glasso, criterion = "ebic")
-      priorCov <- out.select$opt.cov
-    }
     else if (covariance=="shr"){
       sigmaDiag <- diag(bottomVar)
       priorCov <-  shrink.estim(bottomResiduals, tar=build.target(bottomResiduals,type="D"))[[1]]
@@ -69,12 +62,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
       Sigma_y <- diag(upperVar)
     }
     #if we only one upper time series, there is no covariance matrix to be estimated. 
-    else if (covariance=="glasso") {
-      #get variance and covariance of the residuals
-      out.glasso <- huge(upperResiduals, method = "glasso", cov.output = TRUE)
-      out.select <- huge.select(out.glasso, criterion = "ebic")
-      Sigma_y <- out.select$opt.cov
-    }
     else if (covariance=="sam") {
       #get variance and covariance of the residuals
       Sigma_y <- cov(upperResiduals)
@@ -106,7 +93,8 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   }
   
   
-  #The buReconcile function computes the bu prediction given the predictions (1 x tot time series) and the S matrix
+  #The buReconcile function computes the bu prediction given the predictions for the bottom time series
+  #and the S matrix. We use it after having update the distribution of the bottom time series.
   #(tot time series X bottom time series)
   #predsAllTs is a flag: is set to true, the input preds contains predictions for all the hierarchy
   #and the function retrieves the bottom series; if set to false, this is not needed
@@ -128,21 +116,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     }
     return (buPreds)
   }
-  
-  #check the calibration of the prediction interval with coverage (1-currentAlpha)
-  checkCalibration <- function(preds,sigmas,htsActual,coverage){
-    stdQuant <- abs(qnorm((1-coverage)/2))
-    included <- vector(length = length(preds))
-    actual <- allts(htsActual)[h,]
-    for (ii in seq_along(preds)){
-      upper <- preds[ii] + stdQuant * sigmas[ii]
-      lower <- preds[ii] - stdQuant * sigmas[ii]
-      included[ii] <- (actual[ii] > lower) &  (actual[ii] < upper)
-    }
-    return (mean(included))
-  }
-  
-  
   
   hierMse <- function (htsPred, htsActual, h) {
     #receives two hts objects, containing  forecast and actual value.
@@ -245,8 +218,6 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
     sigma[i] <- abs ( (tmp$mean[1] - tmp$upper[1])  / (qnorm(alpha / 2)) )
   }
   mseBase =  mean  ( (allts(test)[h,] - preds)^2 )
-  # mseBayesDiag =  mean  ( (allts(test)[h,] - bayesRecon(covariance="diagonal"))^2 )
-  # mseBayesGlasso =  mean  ( (allts(test)[h,] - bayesRecon(covariance="glasso"))^2 )
   mseBayesShr =  mean  ( (allts(test)[h,] - bayesRecon(covariance="shr"))^2 )
   
   
