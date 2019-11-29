@@ -33,8 +33,8 @@ The base forecasts can be created using either `auto.arima` or `ets`, both avail
 
 Examples with generated data sets:
 ```R
- hierRec(dset="synthetic", h=1, synth_n=100, synthCorrel=0.2, howManyBottom=2) 
- hierRec(dset="synthetic", h=3, synth_n=300, synthCorrel=0.8, howManyBottom=4)  
+ hierRec(dset="synthetic", h=1, synth_n=100, synthCorrel=0.2) # hierarchy is 2-1 
+ hierRec(dset="syntheticLarge", h=3, synth_n=300)  # hierarchy is 4-2-1 
 ```
 Arguments:
 
