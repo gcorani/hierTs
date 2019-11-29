@@ -9,6 +9,7 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   #seed is especially important when you run synthetic experiments, to make sure you get different data in each experimetn
   
   library(hts)
+  library(SHIP)
   source("loadTourism.R")
   set.seed(seed)
   
@@ -169,15 +170,17 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   test                <- window(hierTs, start =timeIdx[endTrain +1], end=timeIdx[endTrain + h])
   
   #sometimes the sample matrix is not positive definite and minT crashes
-  #the matrix is computed internally by.libPaths() minT and cannot be controlled from here.
-  # mseMintSample <- NA
+  #we thus enclose the call within a try statement.
+  #moreover, we run it only on toy examples
   mseMintSample <- NA
-  try({
-    fcastMintSam <-
-      forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod,
-               covariance="sam")
-    mseMintSample  <- hierMse(fcastMintSam, test,  h)
-  })
+  if (dset=="synthetic" || dset=="syntheticLarge"){
+    try({
+      fcastMintSam <-
+        forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod,
+                 covariance="sam")
+      mseMintSample  <- hierMse(fcastMintSam, test,  h)
+    })
+  }
   fcastMintShr <-
     forecast(train, h = h, method = "comb", weights="mint", fmethod=fmethod, 
              covariance="shr")
@@ -222,16 +225,19 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   
   
   mseBayesSample <- NA
-  try({
-    mseBayesSample =  mean  ( (allts(test)[h,] - bayesRecon(covariance="sam"))^2 )
-  })
+  #the sample estimate of the covariance, we only use it in toy examples
+  if (dset=="synthetic" || dset=="syntheticLarge"){
+    try({
+      mseBayesSample =  mean  ( (allts(test)[h,] - bayesRecon(covariance="sam"))^2 )
+    })
+  }
   #save to file the results, at every iteration
   
   if (dset=="synthetic"){
     dataFrame <- data.frame(h, fmethod, synth_n, synthCorrel, corrB2_U, mseBase,mseMintSample,
-                            mseMintShr, mseBayesDiag, mseBayesSample, mseBayesShr)
+                            mseMintShr, mseBayesSample, mseBayesShr)
     colnames(dataFrame) <- c("h","fmethod","sampleSize","correlB1_U","correlB2_U",
-                             "mseBase","mseMintSample","mseMintShr","mseBayesDiag","mseBayesSample", "mseBayesShr")
+                             "mseBase","mseMintSample","mseMintShr","mseBayesSample", "mseBayesShr")
     dset <- paste0(dset,"_correl",synthCorrel,"_n",synth_n)
   }
   
@@ -246,8 +252,7 @@ hierRec <- function (dset, h=1, fmethod="ets", iTest=1,
   
   else
   {
-    dataFrame <- data.frame(h, fmethod, dset, calibration50, calibration80, 
-                            mseBase,mseMintSample,mseMintShr,mseBayesDiag,mseBayesSample,mseBayesShr)
+    dataFrame <- data.frame(h, fmethod, dset, mseBase,mseMintSample,mseMintShr,mseBayesSample,mseBayesShr)
   }
   
   
